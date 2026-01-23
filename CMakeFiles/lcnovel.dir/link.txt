@@ -1,0 +1,1 @@
+/usr/bin/c++ -Wl,--dependency-file=CMakeFiles/lcnovel.dir/link.d CMakeFiles/lcnovel.dir/main.cpp.o -o lcnovel   -L/home/boyaroslav/proj/cock_novel/sdl  -L/home/boyaroslav/proj/cock_novel/SHARED  -Wl,-rpath,/home/boyaroslav/proj/cock_novel/sdl:/home/boyaroslav/proj/cock_novel/SHARED -lSDL2 -lSDL2_image -lSDL2_ttf -lSDL2_mixer
