@@ -1,4 +1,0 @@
-/Users/boyaroslav/proj/mynovel/CMakeFiles/lcnovel.dir
-/Users/boyaroslav/proj/mynovel/CMakeFiles/dumper.dir
-/Users/boyaroslav/proj/mynovel/CMakeFiles/edit_cache.dir
-/Users/boyaroslav/proj/mynovel/CMakeFiles/rebuild_cache.dir
