@@ -262,23 +262,36 @@ document.addEventListener('keydown', (e) => {
       };
       
       // SET - 2 аргумента (переменная, значение)
-      jsGenerator.forBlock['SET'] = function (block){
+      jsGenerator.forBlock['SET'] = function (block) {
         console.log(block);
-        let variable = jsGenerator.valueToCode(block, "VAR", jsGenerator.ORDER_ATOMIC) || `""`;
-        let value = jsGenerator.valueToCode(block, "VAL", jsGenerator.ORDER_ATOMIC) || `""`;
         
+        // Получаем значения без автоматической обработки
+        let variable = jsGenerator.valueToCode(block, "VAR", jsGenerator.ORDER_ATOMIC) || '""';
+        let value = jsGenerator.valueToCode(block, "VAL", jsGenerator.ORDER_ATOMIC) || '""';
+        
+        // Очищаем variable от кавычек (так как это имя переменной)
+        variable = variable.replace(/^"(.*)"$/, '$1');
         variable = cleanValue(variable);
         
-        // Определяем тип значения
-        if (value && (value.startsWith('"') && value.endsWith('"'))) {
-          // Это строка
-          value = cleanValue(value);
+        // Обрабатываем value в зависимости от его типа
+        if (value.match(/^".*"$/)) {
+          // Это строка - оставляем кавычки как есть
+          value = cleanValue(value); // уже в кавычках
           return `SET "${variable}" "${value}"\n`;
-        } else {
-          // Это число
+        } else if (value.match(/^-?\d+\.?\d*$/)) {
+          // Это число - форматируем без кавычек
           value = formatNumber(value);
           return `SET "${variable}" ${value}\n`;
+        } else {
+          value = value.replace(/"/g, '\\"');
+          variable = variable.replace(/"/g, '\\"');
+          // Это может быть выражение или переменная
+          // Оставляем как есть
         }
+        value = cleanValue(value);
+        //variable = variable.replace("'", "");
+        
+        return `SET "${variable}" "${value}"\n`;
       };
       
       // MV - 3 аргумента (персонаж, x, y)

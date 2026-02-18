@@ -13,6 +13,7 @@ int main(int argc, char* argv[]) {
     strcpy(n, "scene.bin");
 
     scr.load_(n);
+    scr.change_scene("main");
 
     scr.run(run);
 

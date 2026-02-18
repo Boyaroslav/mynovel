@@ -101,7 +101,8 @@ int load_file(const char* filename, std::vector<Scene>& sc_out, int* out_count) 
 
 
 int find_scene_index_by_name(const std::vector<Scene>& scenes, const std::string& name) {
-    for (size_t i = 0; i < scenes.size(); ++i) {
+    for (size_t i = 0; i < scenes.size(); i++) {
+        std::cout<<scenes[i].name<<" "<<name.c_str()<<"\n";
         if (strcmp(scenes[i].name, name.c_str()) == 0) {
             return static_cast<int>(i);
         }

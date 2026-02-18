@@ -7,6 +7,7 @@ struct event_type{
     const char* name;
 };
 
+#define ARG_DOUBLE 2
 #define ARG_STRING 1
 #define ARG_INT 0
 
@@ -31,6 +32,7 @@ const event_type event_types[]= {
     {12, 3, "LDSIZE"}, // change size of sprite in px
     {13, 5, "LDXYWH"}, // LD with x y w and h
     {14, 1, "CALL"}, // ну пока хз но скорее всего функции буду вызывать
+    {15, 3, "OPERATION"} // операции над переменными
     
 
 

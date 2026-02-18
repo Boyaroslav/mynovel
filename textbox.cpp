@@ -2,6 +2,7 @@
 
 #include "textbox.hpp"
 
+
 void TextBox::draw(SDL_Renderer* rend){
     SDL_SetRenderDrawColor(rend, box_color.r, box_color.g, box_color.b, box_color.a);
     SDL_RenderFillRect(rend, &border);
@@ -88,7 +89,7 @@ void TextBox::update(float delta_time) {
 
 void TextBox::addMessage(std::string text){
     if(messages.size()) done_messages();
-    messages.push_back({text, 0.1, std::chrono::steady_clock::now(), 0});
+    messages.push_back({interpolate(text), 0.1, std::chrono::steady_clock::now(), 0});
 }
 
 void TextBox::cl(){

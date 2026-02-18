@@ -105,6 +105,7 @@ public:
         main_font = Font();
         main_font.load();
         vars_init();
+        SDL_SetWindowTitle(window, (const char*)get_value("WINDOW_TITLE"));
 
         textbox = TextBox();
         // bg.load_texture(renderer, "picture.png");
@@ -267,8 +268,26 @@ public:
             case 9:   // SET variable value
             {
                 const char* var = get_from_spool(apool[current_event->args_offset].value);
-                int val = apool[current_event->args_offset+1].value;
-                std::cout << "[SET] " << var << "=" << val << "\n";
+                earg& val_arg = apool[current_event->args_offset + 1];
+
+                Var result;
+                if (val_arg.type == ARG_INT) // int
+                {
+                    result = make_var((uint32_t)val_arg.value);
+                }
+                else if (val_arg.type == ARG_DOUBLE) // float — value хранит биты float
+                {
+                    float f;
+                    memcpy(&f, &val_arg.value, sizeof(float));
+                    result = make_var((double)f);
+                }
+                else if (val_arg.type == ARG_STRING) // string
+                {
+                    result = make_var(std::string(get_from_spool(val_arg.value)));
+                }
+
+                variables[var] = result;
+                std::cout << "[SET] " << var << "=" << result.as_string() << "\n";
             }
             break;
 

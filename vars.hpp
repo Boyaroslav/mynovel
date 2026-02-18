@@ -2,57 +2,90 @@
 #include "event_types.hpp"
 #include <variant>
 
-using Var = std::variant<int, double, std::string>;
+struct Var {
+    enum class Type { Int, Float, String, Null } type = Type::Null;
 
-std::unordered_map<std::string, std::string> string_variables;
-std::unordered_map<std::string, uint32_t> int_variables;
-std::unordered_map<std::string, double> float_variables;
+    uint32_t    i = 0;
+    double      f = 0.0;
+    std::string s;
 
-template<typename T>
-T get_value(const std::string& t) {
-    if constexpr (std::is_same_v<T, int>) {
-        auto it = int_variables.find(t);
-        if (it != int_variables.end()) return it->second;
-        return "default";
-    }
-    if constexpr (std::is_same_v<T, std::string>) {
-        auto it = string_variables.find(t);
-        if (it != string_variables.end()) return it->second;
-        return "default";
-    }
-    if constexpr (std::is_same_v<T, float>) {
-        auto it = float_variables.find(t);
-        if (it != float_variables.end()) return it->second;
-        return "default";
-    }
-}
+    // удобные геттеры
+    uint32_t    as_int()    const { return i; }
+    double      as_float()  const { return f; }
+    std::string as_string() const { return s; }
 
-float get_value(std::string t) {
-    return float_variables[t];
-}
+    bool is_null()   const { return type == Type::Null; }
+    bool is_int()    const { return type == Type::Int; }
+    bool is_float()  const { return type == Type::Float; }
+    bool is_string() const { return type == Type::String; }
+    operator uint32_t()    const { return i; }
+    operator double()      const { return f; }
+    operator float()       const { return (float)f; }
+    operator std::string() const { return s; }
+    operator bool()        const { return type != Type::Null; }
+    operator const char*() const { return s.c_str(); }
+};
 
-void set_value(std::string t, int v) {
-    int_variables[t] = v;
-}
+// фабричные функции
+Var make_var(uint32_t v)        { Var r; r.type = Var::Type::Int;    r.i = v; return r; }
+Var make_var(double v)          { Var r; r.type = Var::Type::Float;  r.f = v; return r; }
+Var make_var(int v)          { Var r; r.type = Var::Type::Int;  r.f = v; return r; }
+Var make_var(std::string v)     { Var r; r.type = Var::Type::String; r.s = v; return r; }
 
+std::unordered_map<std::string, Var> variables;
 
-void set_value(std::string t, uint32_t v) {
-    int_variables[t] = v;
-}
+void set_value(const std::string& t, uint32_t v)    { variables[t] = make_var(v); }
+void set_value(const std::string& t, int v)    { variables[t] = make_var(v); }
+void set_value(const std::string& t, double v)      { variables[t] = make_var(v); }
+void set_value(const std::string& t, std::string v) { variables[t] = make_var(v); }
 
-void set_value(std::string t, double v) {
-    float_variables[t] = v;
-}
-
-void set_value(std::string t, std::string v) {
-    string_variables[t] = v;
+Var get_value(const std::string& t) {
+    auto it = variables.find(t);
+    if (it != variables.end()) return it->second;
+    return Var{}; // Null
 }
 
 void vars_init() {
-    set_value("VAR_BG_CHANGE_SPEED", 1.0);
-    set_value("NUIL", 1111);
-    set_value("WINDOW_TITLE", "cock novel");
-    auto v1 = get_value("PENIS");
-    auto v2 = get_value("WINDOW_TITLE");
-    std::cout<<"HUIII "<<v1<<" "<<v2<<"\n";
+    set_value("VAR_BG_CHANGE_SPEED", 5.0);
+    set_value("WINDOW_TITLE", std::string("my novel"));
+
+}
+
+std::string interpolate(const std::string& text) {
+    std::string result;
+    result.reserve(text.size());
+    
+    size_t i = 0;
+    while (i < text.size()) {
+        if (text[i] == '$' && i + 1 < text.size() && text[i + 1] == '{') {
+            size_t start = i + 2;
+            size_t end = text.find('}', start);
+            
+            if (end == std::string::npos) {
+                // незакрытая скобка — вставляем как есть
+                result += text[i];
+                i++;
+                continue;
+            }
+            
+            std::string var_name = text.substr(start, end - start);
+            Var val = get_value(var_name);
+            
+            if (!val.is_null()) {
+                if (val.is_int())         result += std::to_string(val.as_int());
+                else if (val.is_float())  result += std::to_string(val.as_float());
+                else if (val.is_string()) result += val.as_string();
+            } else {
+                // переменная не найдена — вставляем оригинал ${name}
+                result += "${" + var_name + "}";
+            }
+            
+            i = end + 1;
+        } else {
+            result += text[i];
+            i++;
+        }
+    }
+    
+    return result;
 }
