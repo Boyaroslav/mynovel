@@ -1,7 +1,7 @@
 {
 	"InstallScripts" : 
 	[
-		"/home/boyaroslav/proj/cock_novel/cmake_install.cmake"
+		"/Users/boyaroslav/proj/mynovel/cmake_install.cmake"
 	],
 	"Parallel" : false
 }

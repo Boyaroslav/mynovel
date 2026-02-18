@@ -1,3 +1,4 @@
-/home/boyaroslav/proj/cock_novel/CMakeFiles/lcnovel.dir
-/home/boyaroslav/proj/cock_novel/CMakeFiles/edit_cache.dir
-/home/boyaroslav/proj/cock_novel/CMakeFiles/rebuild_cache.dir
+/Users/boyaroslav/proj/mynovel/CMakeFiles/lcnovel.dir
+/Users/boyaroslav/proj/mynovel/CMakeFiles/dumper.dir
+/Users/boyaroslav/proj/mynovel/CMakeFiles/edit_cache.dir
+/Users/boyaroslav/proj/mynovel/CMakeFiles/rebuild_cache.dir

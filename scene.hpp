@@ -1,19 +1,22 @@
 #include "utils.hpp"
 #include "event.hpp"
-
-class Scene{
-    public:
-    str name;
-    str title;
-
-    template<typename... Args>
-    void add_event(uint8_t command, Args... args) {
-
-        // Печать всех аргументов (если есть)
-        ((std::cout << "- " << args << "\n"), ...);
-    }
+#include <cstring>
+#pragma once
 
 
-    Scene(str n){ name = n;}
+#pragma pack(push, 1)
+struct Scene{
+    uint16_t id;
+
+    uint32_t event_start;
+    uint16_t event_count;
+
+    uint32_t string_start;
+    uint32_t string_size;
+
+    char name[32];
+
+
 
 };
+#pragma pack(pop)

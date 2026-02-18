@@ -1,5 +1,4 @@
 file(REMOVE_RECURSE
-  "CMakeFiles/lcnovel.dir/link.d"
   "CMakeFiles/lcnovel.dir/main.cpp.o"
   "CMakeFiles/lcnovel.dir/main.cpp.o.d"
   "lcnovel"

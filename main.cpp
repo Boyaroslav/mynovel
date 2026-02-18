@@ -4,13 +4,15 @@
 
 int main(int argc, char* argv[]) {
     Screen scr = Screen();
-    Scene scene = Scene("main");
+    char n[32] = "cock novel";
+    Scene scene;
 
     abool run = true;
 
     scr.init_();
+    strcpy(n, "scene.bin");
 
-    scr.load_("cock");
+    scr.load_(n);
 
     scr.run(run);
 

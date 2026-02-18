@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>VN Editor</title>
+  <link rel="stylesheet" href="style.css" />
+  <script src="https://unpkg.com/blockly/blockly.min.js"></script>
+  <script src="https://unpkg.com/blockly/javascript_compressed.js"></script>
+
+  <script src="commands.js"></script>
+  <script src="generators.js"></script>
+</head>
+<body>
+  <div id="blockly"></div>
+  <div id="code">
+    <button id="btnGen">Generate</button>
+    <button id="btnClear">Clear</button>
+    <button id="saveBtn">Save</button>
+  <input type="file" id="loadInput" accept=".json" style="display:none">
+  <button id="loadBtn">Load</button>
+<div id="blocklyDiv" style="height: 1000px; width: 800px;"></div>
+    <textarea id="out" style="min-height: 90%; padding-top: 10px;" readonly></textarea>
+  </div>
+
+  <script>
+    const workspace = Blockly.inject('blockly', {
+      toolbox: COMMANDS_TOOLBOX,
+      trashcan: true,
+      scrollbars: true,
+      disableContextMenu: false
+    });
+
+
+// ===== SAVE JSON =====
+document.getElementById("saveBtn").onclick = () => {
+    const json = Blockly.serialization.workspaces.save(workspace);
+
+    const blob = new Blob([JSON.stringify(json, null, 2)], {
+        type: "application/json"
+    });
+
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+
+    a.href = url;
+    a.download = "project.json";
+    a.click();
+
+    URL.revokeObjectURL(url);
+};
+
+
+// ===== LOAD JSON =====
+document.getElementById("loadBtn").onclick = () => {
+    document.getElementById("loadInput").click();
+};
+
+document.getElementById("loadInput").onchange = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = function() {
+        const json = JSON.parse(reader.result);
+        Blockly.serialization.workspaces.load(json, workspace);
+    };
+    reader.readAsText(file);
+};
+
+document.addEventListener("dragover", (e) => {
+    e.preventDefault();
+});
+
+document.addEventListener("drop", (e) => {
+    e.preventDefault();
+
+    const file = e.dataTransfer.files[0];
+    if (!file || !file.name.endsWith(".json")) return;
+
+    const reader = new FileReader();
+    reader.onload = function() {
+        const json = JSON.parse(reader.result);
+        Blockly.serialization.workspaces.load(json, workspace);
+    };
+    reader.readAsText(file);
+});
+
+
+let clipboardXml = null;
+
+document.addEventListener('keydown', (e) => {
+  const selected = Blockly.selected;
+  if (!selected) return;
+  console.log(selected);
+
+  // COPY
+  if (e.ctrlKey && e.key === 'c') {
+    clipboardXml = Blockly.Xml.blockToDom(selected, true);
+    console.log("Copied:", clipboardXml);
+  }
+
+  // PASTE
+  if (e.ctrlKey && e.key === 'v') {
+    if (!clipboardXml) return;
+
+    const block = Blockly.Xml.domToBlock(clipboardXml, selected.workspace);
+
+    // Переносим рядом, чтобы не накладывать
+    const pos = selected.getRelativeToSurfaceXY();
+    block.moveBy(pos.x + 40, pos.y + 40);
+  }
+});
+
+
+
+
+    // Функция для очистки кавычек из значения
+    function cleanValue(value) {
+      if (!value) return '';
+      // Удаляем окружающие кавычки если они есть
+      if ((value.startsWith('"') && value.endsWith('"')) || 
+          (value.startsWith("'") && value.endsWith("'"))) {
+        return value.slice(1, -1);
+      }
+      return value;
+    }
+
+    // Функция для форматирования числа
+    function formatNumber(value) {
+      if (!value) return '0';
+      // Если это строка с числом, возвращаем как есть
+      if (/^-?\d+$/.test(value)) return value;
+      // Иначе пытаемся преобразовать
+      const num = parseFloat(value);
+      return isNaN(num) ? '0' : num.toString();
+    }
+
+    function gen() {
+      let MACROS = Map;
+      console.log(workspace);
+      const jsGenerator = Blockly.JavaScript;
+      jsGenerator.init = function() {};
+      jsGenerator.finish = function(code) { return code; };
+
+      
+      // Генератор для SCRIPT блока
+      jsGenerator.forBlock['SCRIPT'] = function (block){
+        console.log(block);
+        let text = block.getFieldValue('SCRIPT_ID') || "main";
+        let statements = jsGenerator.statementToCode(block, 'DO');
+        statements = statements.replace(/^\s+/gm, '');
+        return `SCRIPT ${text}\n${statements}END\n`;
+      };
+
+      jsGenerator.forBlock['FUNC'] = function(block) {
+        let name = block.getFieldValue("NAME");
+        let body = jsGenerator.statementToCode(block, "BODY");
+        body = body.replace(/^\s+/gm, "");
+        return `FUNC ${name}\n${body}END\n`;
+      };
+      jsGenerator.forBlock['CALL'] = function(block) {
+        let name = block.getFieldValue("NAME");
+        return `CALL ${name}\n`;
+      };
+      // TXT - 1 аргумент (текст)
+      jsGenerator.forBlock['TXT'] = function (block){
+        console.log(block);
+        let text = jsGenerator.valueToCode(block, "TEXT", jsGenerator.ORDER_ATOMIC) || `""`;
+        text = cleanValue(text);
+        return `TXT "${text}"\n`;
+      };
+      
+      jsGenerator.forBlock['ROW'] = function (block){
+        console.log(block);
+        // Получаем количество команд
+        let count = 0;
+        
+        // Получаем команды внутри ROW
+        let commands = jsGenerator.statementToCode(block, 'COMMANDS');
+        commands = commands.replace(/^\s+/gm, ''); // Убираем отступы
+        
+        // Подсчитываем количество команд внутри ROW (по количеству строк)
+        const lineCount = commands.split('\n').filter(line => line.trim().length > 0).length;
+        
+        // Если count не указан или 0, используем фактическое количество команд
+        const actualCount = (count === "0" || !count) ? lineCount : count;
+        
+        // Возвращаем ROW с количеством и командами
+        return `ROW ${actualCount}\n${commands}`;
+      };
+      
+      // BG - 1 аргумент (изображение)
+      jsGenerator.forBlock['BG'] = function (block){
+        console.log(block);
+        let img = jsGenerator.valueToCode(block, "IMG", jsGenerator.ORDER_ATOMIC) || `""`;
+        img = cleanValue(img);
+        return `BG "${img}"\n`;
+      };
+      
+      // LD - 1 аргумент (персонаж)
+      jsGenerator.forBlock['LD'] = function (block){
+        console.log(block);
+        let char = jsGenerator.valueToCode(block, "CHAR", jsGenerator.ORDER_ATOMIC) || `""`;
+        char = cleanValue(char);
+        return `LD "${char}"\n`;
+      };
+      
+      // LID - 1 аргумент (число)
+      jsGenerator.forBlock['LID'] = function (block){
+        console.log(block);
+        let id = jsGenerator.valueToCode(block, "ID", jsGenerator.ORDER_ATOMIC) || "0";
+        id = formatNumber(id);
+        return `LID ${id}\n`;
+      };
+      
+      jsGenerator.forBlock['LDSIZE'] = function (block){
+        console.log(block);
+        let char = jsGenerator.valueToCode(block, "CHAR", jsGenerator.ORDER_ATOMIC) || `""`;
+        char = cleanValue(char);
+        let w = jsGenerator.valueToCode(block, "W", jsGenerator.ORDER_ATOMIC) || `50`;
+        let h = jsGenerator.valueToCode(block, "H", jsGenerator.ORDER_ATOMIC) || `50`;
+        return `LDSIZE ${char} ${w} ${h}\n`;
+      };
+
+      jsGenerator.forBlock['LDXYWH'] = function (block){
+        console.log(block);
+        let char = jsGenerator.valueToCode(block, "CHAR", jsGenerator.ORDER_ATOMIC) || `""`;
+        char = cleanValue(char);
+        let x = jsGenerator.valueToCode(block, "X", jsGenerator.ORDER_ATOMIC) || `0`;
+        let y = jsGenerator.valueToCode(block, "Y", jsGenerator.ORDER_ATOMIC) || `0`;
+        let w = jsGenerator.valueToCode(block, "W", jsGenerator.ORDER_ATOMIC) || `50`;
+        let h = jsGenerator.valueToCode(block, "H", jsGenerator.ORDER_ATOMIC) || `50`;
+        return `LDXYWH ${char} ${x} ${y} ${w} ${h}\n`;
+      };
+
+      // ALIAS - 2 аргумента (псевдоним → текст)
+      jsGenerator.forBlock['ALIAS'] = function (block){
+        console.log(block);
+        let alias = jsGenerator.valueToCode(block, "A", jsGenerator.ORDER_ATOMIC) || `""`;
+        let text = jsGenerator.valueToCode(block, "T", jsGenerator.ORDER_ATOMIC) || `""`;
+        alias = cleanValue(alias);
+        text = cleanValue(text);
+        return `ALIAS "${alias}" "${text}"\n`;
+      };
+      
+      // CHSPR - 2 аргумента (персонаж → спрайт)
+      jsGenerator.forBlock['CHSPR'] = function (block){
+        console.log(block);
+        let char = jsGenerator.valueToCode(block, "CHAR", jsGenerator.ORDER_ATOMIC) || `""`;
+        let sprite = jsGenerator.valueToCode(block, "SPRITE", jsGenerator.ORDER_ATOMIC) || `""`;
+        char = cleanValue(char);
+        sprite = cleanValue(sprite);
+        return `CHSPR "${char}" "${sprite}"\n`;
+      };
+      
+      // RET - 1 аргумент (число: -1 mainscreen, -2 outofgame)
+      jsGenerator.forBlock['RET'] = function (block){
+        console.log(block);
+        let to = jsGenerator.valueToCode(block, "TO", jsGenerator.ORDER_ATOMIC) || "finale";
+        to = cleanValue(to);
+        return `RET "${to}"\n`;
+      };
+      
+      // SET - 2 аргумента (переменная, значение)
+      jsGenerator.forBlock['SET'] = function (block){
+        console.log(block);
+        let variable = jsGenerator.valueToCode(block, "VAR", jsGenerator.ORDER_ATOMIC) || `""`;
+        let value = jsGenerator.valueToCode(block, "VAL", jsGenerator.ORDER_ATOMIC) || `""`;
+        
+        variable = cleanValue(variable);
+        
+        // Определяем тип значения
+        if (value && (value.startsWith('"') && value.endsWith('"'))) {
+          // Это строка
+          value = cleanValue(value);
+          return `SET "${variable}" "${value}"\n`;
+        } else {
+          // Это число
+          value = formatNumber(value);
+          return `SET "${variable}" ${value}\n`;
+        }
+      };
+      
+      // MV - 3 аргумента (персонаж, x, y)
+      jsGenerator.forBlock['MV'] = function (block){
+        console.log(block);
+        let char = jsGenerator.valueToCode(block, "CHAR", jsGenerator.ORDER_ATOMIC) || `""`;
+        let x = jsGenerator.valueToCode(block, "X", jsGenerator.ORDER_ATOMIC) || "0";
+        let y = jsGenerator.valueToCode(block, "Y", jsGenerator.ORDER_ATOMIC) || "0";
+        let t = jsGenerator.valueToCode(block, "t", jsGenerator.ORDER_ATOMIC) || "0";
+        
+        char = formatNumber(char);
+        x = formatNumber(x);
+        y = formatNumber(y);
+        t = formatNumber(t);
+        
+        return `MV ${char} ${x} ${y} ${t}\n`;
+      };
+      
+      // CLTB - 0 аргументов
+      jsGenerator.forBlock['CLTB'] = function (block){
+        console.log(block);
+        return `CLTB\n`;
+      };
+
+      jsGenerator.forBlock['variables_get'] = function (block){
+        let v = MACROS[block.getFieldValue('FIELD_NAME')];
+        console.log(v);
+
+        return [v, jsGenerator.ORDER_ATOMIC];
+      };
+
+      jsGenerator.forBlock['variables_set'] = function (block){
+        const name = block.getFieldValue("FIELD_NAME");
+        let val = jsGenerator.valueToCode(block, "NAME", jsGenerator.ORDER_ATOMIC);
+        MACROS[name] = val;
+        return "";
+      };
+      
+      // Дополнительные генераторы для стандартных блоков
+      
+      // Генератор для текстовых блоков (стандартный)
+      if (!jsGenerator.forBlock['text']) {
+        jsGenerator.forBlock['text'] = function(block) {
+          const text = block.getFieldValue('TEXT');
+          // Если текст пустой, возвращаем пустую строку
+          if (!text) return '""';
+          // Экранируем кавычки внутри строки
+          const escapedText = text.replace(/"/g, '\\"');
+          return `"${escapedText}"`;
+        };
+      }
+      
+      // Генератор для числовых блоков (стандартный)
+      if (!jsGenerator.forBlock['math_number']) {
+        jsGenerator.forBlock['math_number'] = function(block) {
+          const number = block.getFieldValue('NUM');
+          return [number, jsGenerator.ORDER_ATOMIC];
+        };
+      }
+
+      document.getElementById('out').value = jsGenerator.workspaceToCode(workspace);
+    }
+
+    document.getElementById('btnGen').onclick = gen;
+    document.getElementById('btnClear').onclick = () => workspace.clear();
+  </script>
+</body>
+</html>
