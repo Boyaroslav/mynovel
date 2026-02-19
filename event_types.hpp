@@ -32,7 +32,10 @@ const event_type event_types[]= {
     {12, 3, "LDSIZE"}, // change size of sprite in px
     {13, 5, "LDXYWH"}, // LD with x y w and h
     {14, 1, "CALL"}, // ну пока хз но скорее всего функции буду вызывать
-    {15, 3, "OPERATION"} // операции над переменными
+    {15, 3, "OPERATION"}, // операции над переменными
+    {16, 2, "TBCAP"}, // change textbox footer text - name of talking character and so on
+    {17, 2, "WAIT"}, // таймер
+    {18, 3, "IF"}
     
 
 

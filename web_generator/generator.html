@@ -196,6 +196,13 @@ document.addEventListener('keydown', (e) => {
         img = cleanValue(img);
         return `BG "${img}"\n`;
       };
+
+      jsGenerator.forBlock['WAIT'] = function (block){
+        console.log(block);
+        let img = jsGenerator.valueToCode(block, "WAIT", jsGenerator.ORDER_ATOMIC) || `""`;
+        img = cleanValue(img);
+        return `WAIT ${img}\n`;
+      };
       
       // LD - 1 аргумент (персонаж)
       jsGenerator.forBlock['LD'] = function (block){
@@ -242,7 +249,26 @@ document.addEventListener('keydown', (e) => {
         text = cleanValue(text);
         return `ALIAS "${alias}" "${text}"\n`;
       };
-      
+      jsGenerator.forBlock['OPERATION'] = function (block) {
+        let variable = jsGenerator.valueToCode(block, "VAR", jsGenerator.ORDER_ATOMIC) || '""';
+        variable = cleanValue(variable);
+
+        let op = block.getFieldValue("OP"); // "ADD" | "SUB" | "MUL" | "DIV"
+
+        let value = jsGenerator.valueToCode(block, "VAL", jsGenerator.ORDER_ATOMIC) || '0';
+
+        const opMap = { ADD: "+", SUB: "-", MUL: "*", DIV: "/" };
+        const opChar = opMap[op] || "+";
+
+        if (value.match(/^".*"$/)) {
+          value = cleanValue(value);
+          return `OPERATION "${variable}" ${opChar} "${value}"\n`;
+        } else {
+          value = formatNumber(value);
+          return `OPERATION "${variable}" ${opChar} ${value}\n`;
+        }
+      };
+            
       // CHSPR - 2 аргумента (персонаж → спрайт)
       jsGenerator.forBlock['CHSPR'] = function (block){
         console.log(block);
@@ -250,7 +276,7 @@ document.addEventListener('keydown', (e) => {
         let sprite = jsGenerator.valueToCode(block, "SPRITE", jsGenerator.ORDER_ATOMIC) || `""`;
         char = cleanValue(char);
         sprite = cleanValue(sprite);
-        return `CHSPR "${char}" "${sprite}"\n`;
+        return `CHSPR ${char} "${sprite}"\n`;
       };
       
       // RET - 1 аргумент (число: -1 mainscreen, -2 outofgame)

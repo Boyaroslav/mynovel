@@ -37,7 +37,6 @@ public:
         int w,h;
         SDL_QueryTexture(new_texture, NULL, NULL, &w, &h);
         SDL_SetTextureBlendMode(new_texture, SDL_BLENDMODE_BLEND);
-        rect = SDL_Rect(0, 0, w, h);
         if (index == -1) {
             textures.push_back(sprite_texture{new_texture, w, h});
             texture_size_w=w;
@@ -53,7 +52,12 @@ public:
     Sprite(SDL_Renderer* rend, const char* path){
         load_texture(rend, path);
         //set_rect(50, 50, texture_size_w, texture_size_h);
-        set_rect(50, 50, 300, 300);
+        
+    }
+    Sprite(SDL_Renderer* rend, const char* path, int x, int y, int w, int h){
+        load_texture(rend, path);
+        set_rect(x, y, w, h);
+        //set_rect(50, 50, texture_size_w, texture_size_h);
         
     }
 

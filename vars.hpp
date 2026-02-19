@@ -2,6 +2,8 @@
 #include "event_types.hpp"
 #include <variant>
 
+u_int32_t last_id = -1;
+
 struct Var {
     enum class Type { Int, Float, String, Null } type = Type::Null;
 
@@ -69,15 +71,19 @@ std::string interpolate(const std::string& text) {
             }
             
             std::string var_name = text.substr(start, end - start);
-            Var val = get_value(var_name);
-            
-            if (!val.is_null()) {
-                if (val.is_int())         result += std::to_string(val.as_int());
-                else if (val.is_float())  result += std::to_string(val.as_float());
-                else if (val.is_string()) result += val.as_string();
+            if (var_name == "LID") {
+                result += std::to_string(last_id);
             } else {
-                // переменная не найдена — вставляем оригинал ${name}
-                result += "${" + var_name + "}";
+                Var val = get_value(var_name);
+                
+                if (!val.is_null()) {
+                    if (val.is_int())         result += std::to_string(val.as_int());
+                    else if (val.is_float())  result += std::to_string(val.as_float());
+                    else if (val.is_string()) result += val.as_string();
+                } else {
+                    // переменная не найдена — вставляем оригинал ${name}
+                    result += "${" + var_name + "}";
+                }
             }
             
             i = end + 1;

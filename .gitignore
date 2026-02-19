@@ -7,3 +7,4 @@ dumper
 CMakeCache.txt
 cmake_install.cmake
 *Makefile*
+a.out

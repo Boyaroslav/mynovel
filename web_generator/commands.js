@@ -44,6 +44,28 @@ Blockly.Blocks['FUNC'] = {
     this.setHelpUrl("");
   }
 };
+// OPERATION
+Blockly.Blocks['OPERATION'] = {
+  init: function () {
+    this.appendValueInput("VAR")
+      .setCheck("String")
+      .appendField("OPERATION");
+    this.appendDummyInput()
+      .appendField(new Blockly.FieldDropdown([
+        ["+", "ADD"],
+        ["-", "SUB"],
+        ["*", "MUL"],
+        ["/", "DIV"]
+      ]), "OP");
+    this.appendValueInput("VAL")
+      .setCheck(["String", "Number"])
+      .appendField("val");
+    this.setPreviousStatement(true);
+    this.setNextStatement(true);
+    this.setColour(COL_LOGIC);
+    this.setTooltip("Применить операцию к переменной: VAR = VAR OP VAL");
+  }
+};
 
 Blockly.Blocks['CALL'] = {
   init: function() {
@@ -73,6 +95,17 @@ Blockly.Blocks['TXT'] = {
     this.setColour(COL_TEXT);
   }
 };
+
+Blockly.Blocks['WAIT'] = {
+  init: function () {
+    this.appendValueInput("WAIT")
+      .appendField("WAIT");
+    this.setPreviousStatement(true);
+    this.setNextStatement(true);
+    this.setColour(COL_ANIM);
+  }
+};
+
 
 // CLTB
 Blockly.Blocks['CLTB'] = {
@@ -140,8 +173,8 @@ Blockly.Blocks['LID'] = {
 // CHSPR
 Blockly.Blocks['CHSPR'] = {
   init: function () {
-    this.appendValueInput("CHAR").setCheck("String").appendField("CHSPR");
-    this.appendValueInput("SPRITE").setCheck("String").appendField("→");
+    this.appendValueInput("CHAR").appendField("CHSPR");
+    this.appendValueInput("SPRITE").appendField("→");
     this.setPreviousStatement(true);
     this.setNextStatement(true);
     this.setColour(COL_GRAPH);
@@ -294,7 +327,8 @@ const COMMANDS_TOOLBOX = {
       "contents":[
         { "kind":"block","type":"ALIAS" },
         { "kind":"block","type":"SET" },
-        { "kind":"block","type":"RET" }
+        { "kind":"block","type":"RET" },
+        { "kind":"block","type":"OPERATION" }
       ]
     },
     { 
@@ -302,7 +336,8 @@ const COMMANDS_TOOLBOX = {
       "name": "Animation", 
       "colour": COL_ANIM, 
       "contents":[
-        { "kind":"block","type":"MV" }
+        { "kind":"block","type":"MV" },
+        { "kind":"block","type":"WAIT" }
       ]
     },
     { 

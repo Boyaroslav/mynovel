@@ -6,22 +6,30 @@
 #include "textbox.cpp"
 #include "sprite.hpp"
 
-struct callframe{
-    Scene* s;
+struct callframe
+{
+    Scene *s;
     int ret_pos;
 };
 
 class Screen
 {
 private:
-    SDL_Window* window = nullptr;
-    SDL_Renderer* renderer = nullptr;
+    SDL_Window *window = nullptr;
+    SDL_Renderer *renderer = nullptr;
     int px, py;
     int event_pool_position = 0;
     uint32_t last_time;
     TextBox textbox;
-    Scene* current_scene = nullptr;
+
+    int row_n = 0;
+    int row_executed = 0;
+    bool IN_ROW = false;
+
+    Scene *current_scene = nullptr;
     int event_pool_position_buffer = 0;
+    bool WAITING = false;
+    float wait_timer = 0.0f;
     int function_commands_left = 0; // когда вызвается функция CALL [func] то на scene->event_count количество эвентов мы берем команды с пула со сдвигом функции, потом возвращаем каретку обратно
 
     Sprite bg = Sprite();
@@ -40,72 +48,68 @@ public:
     Screen() = default;
     std::vector<Scene> scenes;
     int scenes_number = 0;
-    Event* current_event = nullptr;
-
+    Event *current_event = nullptr;
 
     bool init_()
     {
         // SDL
         if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO) != 0)
-            {
-                log("SDL_Init error");
-                return false;
-            }
+        {
+            log("SDL_Init error");
+            return false;
+        }
 
         // SDL_image
         if (!(IMG_Init(IMG_INIT_PNG) & IMG_INIT_PNG))
-            {
-                log("IMG_Init error");
-                return false;
-            }
+        {
+            log("IMG_Init error");
+            return false;
+        }
 
         // SDL_ttf
         if (TTF_Init() == -1)
-            {
-                log("TTF_Init error");
-                return false;
-            }
+        {
+            log("TTF_Init error");
+            return false;
+        }
 
         // SDL_mixer
         if (Mix_OpenAudio(44100, MIX_DEFAULT_FORMAT, 2, 2048) < 0)
-            {
-                log("Mix_OpenAudio error");
-                return false;
-            }
+        {
+            log("Mix_OpenAudio error");
+            return false;
+        }
 
         window = SDL_CreateWindow(
-                     "lcnovel",
-                     SDL_WINDOWPOS_CENTERED,
-                     SDL_WINDOWPOS_CENTERED,
-                     width,
-                     height,
-                     SDL_WINDOW_SHOWN
-                 );
+            "lcnovel",
+            SDL_WINDOWPOS_CENTERED,
+            SDL_WINDOWPOS_CENTERED,
+            width,
+            height,
+            SDL_WINDOW_SHOWN);
 
         if (!window)
-            {
-                log("SDL_CreateWindow error");
-                return false;
-            }
+        {
+            log("SDL_CreateWindow error");
+            return false;
+        }
 
         renderer = SDL_CreateRenderer(
-                       window,
-                       -1,
-                       SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC
-                   );
+            window,
+            -1,
+            SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
         SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
 
-
         if (!renderer)
-            {
-                log("SDL_CreateRenderer error");
-                return false;
-            }
+        {
+            log("SDL_CreateRenderer error");
+            return false;
+        }
 
         main_font = Font();
         main_font.load();
         vars_init();
-        SDL_SetWindowTitle(window, (const char*)get_value("WINDOW_TITLE"));
+        SDL_SetWindowTitle(window, (const char *)get_value("WINDOW_TITLE"));
 
         textbox = TextBox();
         // bg.load_texture(renderer, "picture.png");
@@ -113,12 +117,13 @@ public:
         return true;
     }
 
-    void load_(char* name)
+    void load_(char *name)
     {
         load_file(name, scenes, &scenes_number);
     }
 
-    void nextEvent(){
+    void nextEvent()
+    {
         if (event_pool_position >= epos && running)
         {
             clean();
@@ -152,16 +157,16 @@ public:
                 event_pool_position++;
         }
     }
-    bool change_scene(const char* scene_name)
+    bool change_scene(const char *scene_name)
     {
         int index = find_scene_index_by_name(scenes, scene_name);
         if (index < 0)
-            {
-                printf("Scene '%s' not found!\n", scene_name);
-                return false;
-            }
+        {
+            printf("Scene '%s' not found!\n", scene_name);
+            return false;
+        }
 
-        Scene& sc = scenes[index];
+        Scene &sc = scenes[index];
         current_scene = &sc;
 
         event_pool_position = sc.event_start;
@@ -169,221 +174,295 @@ public:
         return true;
     }
 
-
-    void handleEvent(bool isnext_needed=true)
+    void handleEvent(bool isnext_needed = true)
     {
 
-        switch(current_event->id)
+        switch (current_event->id)
+        {
+
+        case 1: // TXT
+        {
+            earg *a = &apool[current_event->args_offset];
+            const char *txt = get_from_spool(a->value);
+            std::cout << "[TXT] " << txt << "\n";
+            textbox.addMessage(
+                std::string(txt));
+        }
+        break;
+
+        case 2: // ROW
+        {
+            earg *a = &apool[current_event->args_offset];
+            const char *row = get_from_spool(a->value);
+            int n = a->value;
+            for (int i = 0; i < n; i++)
             {
+                nextEvent();
+                handleEvent(false);
+            }
+        }
+        break;
 
-            case 1:   // TXT
+        case 3: // BG
+        {
+            earg *a = &apool[current_event->args_offset];
+            const char *bgname = get_from_spool(a->value);
+            bg.load_texture(renderer, bgname);
+            bg.set_texture_change_speed((float)get_value("VAR_BG_CHANGE_SPEED"));
+            bg.set_rect(0, 0, width, height);
+            bg.start_transition(bg.get_last());
+        }
+        break;
+
+        case 4: // LD
+        {
+            last_id++;
+            earg *a = &apool[current_event->args_offset];
+            const char *file = get_from_spool(a->value);
+            // todo - сделать файл sprite.pak
+            // где будут храниться все файлы + их имена
+            // после этого сделать в спрайте чтобы он искал текстуру там по имени файла
+            SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
+            SDL_SetRenderTarget(renderer, nullptr);
+            log("LD: " + std::string(file));
+            sprites.emplace_back(renderer, file);
+            std::cout << sprites.size() << "\n";
+            log(sprites[sprites.size() - 1].get_rect());
+        }
+        break;
+
+        case 5: // LID
+        {
+            earg *a = &apool[current_event->args_offset];
+            uint32_t index = a->value;
+            std::cout << "[LID] " << index << "\n";
+        }
+        break;
+
+        case 6: // ALIAS name value
+        {
+            const char *n = get_from_spool(apool[current_event->args_offset].value);
+            const char *v = get_from_spool(apool[current_event->args_offset + 1].value);
+            std::cout << "[ALIAS] " << n << "=" << v << "\n";
+        }
+        break;
+
+        case 7: // CHSPR who sprite
+        {
+            earg *a = &apool[current_event->args_offset];
+            uint32_t index;
+            if (a->type == ARG_STRING)
             {
-                earg* a = &apool[current_event->args_offset];
-                const char* txt = get_from_spool(a->value);
-                std::cout << "[TXT] " << txt << "\n";
-                textbox.addMessage(
-                    std::string(txt)
-                );
+                index = std::stoi((interpolate((get_from_spool(a->value)))));
             }
-            break;
-
-            case 2:   // ROW
+            else
             {
-                earg* a = &apool[current_event->args_offset];
-                const char* row = get_from_spool(a->value);
-                int n = a->value;
-                for(int i=0; i<n; i++)
-                    {
-                        nextEvent();
-                        handleEvent(false);
-                    }
+                index = a->value;
             }
-            break;
 
-            case 3:   // BG
+            const char *sprite_name = get_from_spool(apool[current_event->args_offset + 1].value);
+
+            sprites[index].load_texture(renderer, sprite_name);
+            sprites[index].set_texture_change_speed(1);
+            sprites[index].start_transition(sprites[index].get_last());
+        }
+        break;
+
+        case 8: // RET code
+        {
+            int code = apool[current_event->args_offset].value;
+            const char *val = get_from_spool(code);
+            if (strcmp(val, "finale") == 0)
             {
-                earg* a = &apool[current_event->args_offset];
-                const char* bgname = get_from_spool(a->value);
-                bg.load_texture(renderer, bgname);
-                bg.set_texture_change_speed((float)get_value("VAR_BG_CHANGE_SPEED"));
-                bg.set_rect(0, 0, width, height);
-                bg.start_transition(bg.get_last());
+                running = false;
+                exit(0);
             }
-            break;
+            change_scene(val);
+            NEED_MORE_EVENTS = 1;
+        }
+        break;
 
-            case 4:   // LD
+        case 9: // SET variable value
+        {
+            const char *var = get_from_spool(apool[current_event->args_offset].value);
+            earg &val_arg = apool[current_event->args_offset + 1];
+
+            Var result;
+            if (val_arg.type == ARG_INT) // int
             {
-                earg* a = &apool[current_event->args_offset];
-                const char* file = get_from_spool(a->value);
-                // todo - сделать файл sprite.pak
-                // где будут храниться все файлы + их имена
-                // после этого сделать в спрайте чтобы он искал текстуру там по имени файла
-                SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
-                SDL_SetRenderTarget(renderer, nullptr);
-                log("LD: " + std::string(file));
-                sprites.emplace_back(renderer, file);
-                std::cout<<sprites.size()<<"\n";
-                log(sprites[sprites.size()-1].get_rect());
+                result = make_var((uint32_t)val_arg.value);
             }
-            break;
-
-            case 5:   // LID
+            else if (val_arg.type == ARG_DOUBLE) // float — value хранит биты float
             {
-                earg* a = &apool[current_event->args_offset];
-                uint32_t index = a->value;
-                std::cout << "[LID] " << index << "\n";
+                float f;
+                memcpy(&f, &val_arg.value, sizeof(float));
+                result = make_var((double)f);
             }
-            break;
-
-            case 6:   // ALIAS name value
+            else if (val_arg.type == ARG_STRING) // string
             {
-                const char* n = get_from_spool(apool[current_event->args_offset].value);
-                const char* v = get_from_spool(apool[current_event->args_offset+1].value);
-                std::cout << "[ALIAS] " << n << "=" << v << "\n";
+                result = make_var(std::string(get_from_spool(val_arg.value)));
             }
-            break;
 
-            case 7:   // CHSPR who sprite
+            variables[var] = result;
+            std::cout << "[SET] " << var << "=" << result.as_string() << "\n";
+        }
+        break;
+
+        case 10: // MV x y t
+        {
+            int id = apool[current_event->args_offset].value;
+            int x = apool[current_event->args_offset + 1].value;
+            int y = apool[current_event->args_offset + 2].value;
+            int t = apool[current_event->args_offset + 3].value;
+            std::cout << "[MV] x=" << x << " y=" << y << " t=" << t << "\n";
+            // t это время за которое надо переместить - todo
+            sprites[id].move(x, y);
+        }
+        break;
+
+        case 11: // CLTB
+        {
+            textbox.cl();
+        }
+        break;
+
+        case 13:
+        { // LOAD with x y w h
+            last_id++;
+            earg *a = &apool[current_event->args_offset];
+            const char *file = get_from_spool(a->value);
+            int x = apool[current_event->args_offset + 1].value;
+            int y = apool[current_event->args_offset + 2].value;
+            int w = apool[current_event->args_offset + 3].value;
+            int h = apool[current_event->args_offset + 4].value;
+            // todo - сделать файл sprite.pak
+            // где будут храниться все файлы + их имена
+            // после этого сделать в спрайте чтобы он искал текстуру там по имени файла
+            SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
+            SDL_SetRenderTarget(renderer, nullptr);
+            log("LD: " + std::string(file));
+            sprites.emplace_back(renderer, file, x, y, w, h);
+            log(sprites[sprites.size() - 1].get_rect());
+        }
+        break;
+
+        case 14:
+        { // CALL
+            const char *funcname = get_from_spool(apool[current_event->args_offset].value);
+
+            int index = find_scene_index_by_name(scenes, funcname);
+            if (index < 0)
             {
-                const char* n = get_from_spool(apool[current_event->args_offset].value);
-                const char* s = get_from_spool(apool[current_event->args_offset+1].value);
-                std::cout << "[CHSPR] " << n << " -> " << s << "\n";
+                printf("[CALL] Function '%s' not found!\n", funcname);
+                break;
             }
-            break;
 
-            case 8:   // RET code
+            Scene &func = scenes[index];
+
+            // сохраняем позицию, куда вернуться после функции
+            event_pool_position_buffer = event_pool_position + 1;
+
+            // сколько команд исполнять
+            function_commands_left = func.event_count;
+
+            // переход в функцию
+            event_pool_position = func.event_start;
+
+            printf("[CALL] %s (start=%d, count=%d)\n",
+                   funcname, func.event_start, func.event_count);
+            NEED_MORE_EVENTS = true;
+        }
+        break;
+        case 15: // OPERATION var op val
+        {
+            const char *var = get_from_spool(apool[current_event->args_offset].value);
+            uint8_t op = apool[current_event->args_offset + 1].value; // 0=+ 1=- 2=* 3=/
+            earg &val_arg = apool[current_event->args_offset + 2];
+
+            Var cur = get_value(var);
+            Var val = val_arg.type == 2
+                          ? make_var(std::string(get_from_spool(val_arg.value)))
+                          : make_var((uint32_t)val_arg.value);
+
+            if (cur.is_int() && val.is_int())
             {
-                int code = apool[current_event->args_offset].value;
-                const char* val = get_from_spool(code);
-                if (strcmp(val, "finale") == 0)
-                    {
-                        running = false;
-                        exit(0);
-                    }
-                change_scene(val);
-                NEED_MORE_EVENTS = 1;
+                uint32_t a = cur.as_int(), b = val.as_int();
+                uint32_t res = (op == 0) ? a + b : (op == 1) ? a - b
+                                               : (op == 2)   ? a * b
+                                                             : (b ? a / b : 0);
+                variables[var] = make_var(res);
             }
-            break;
-
-            case 9:   // SET variable value
+            else
             {
-                const char* var = get_from_spool(apool[current_event->args_offset].value);
-                earg& val_arg = apool[current_event->args_offset + 1];
-
-                Var result;
-                if (val_arg.type == ARG_INT) // int
-                {
-                    result = make_var((uint32_t)val_arg.value);
-                }
-                else if (val_arg.type == ARG_DOUBLE) // float — value хранит биты float
-                {
-                    float f;
-                    memcpy(&f, &val_arg.value, sizeof(float));
-                    result = make_var((double)f);
-                }
-                else if (val_arg.type == ARG_STRING) // string
-                {
-                    result = make_var(std::string(get_from_spool(val_arg.value)));
-                }
-
-                variables[var] = result;
-                std::cout << "[SET] " << var << "=" << result.as_string() << "\n";
+                double a = cur.is_float() ? cur.as_float() : cur.as_int();
+                double b = val.is_float() ? val.as_float() : val.as_int();
+                double res = (op == 0) ? a + b : (op == 1) ? a - b
+                                             : (op == 2)   ? a * b
+                                                           : (b ? a / b : 0.0);
+                variables[var] = make_var(res);
             }
-            break;
 
-            case 10:   // MV x y t
-            {
-                int id = apool[current_event->args_offset].value; 
-                int x = apool[current_event->args_offset + 1].value;
-                int y = apool[current_event->args_offset+2].value;
-                int t = apool[current_event->args_offset+3].value;
-                std::cout << "[MV] x=" << x << " y=" << y << " t=" << t << "\n";
-                // t это время за которое надо переместить - todo
-                sprites[id].move(x, y);
-            }
-            break;
-
-            case 11:   // CLTB
-            {
-                textbox.cl();
-
-            }
-            break;
-
-            case 14 : { // CALL
-                const char* funcname = get_from_spool(apool[current_event->args_offset].value);
-
-                int index = find_scene_index_by_name(scenes, funcname);
-                if (index < 0)
-                {
-                    printf("[CALL] Function '%s' not found!\n", funcname);
-                    break;
-                }
-
-                Scene& func = scenes[index];
-
-                // сохраняем позицию, куда вернуться после функции
-                event_pool_position_buffer = event_pool_position + 1;
-
-                // сколько команд исполнять
-                function_commands_left = func.event_count;
-
-                // переход в функцию
-                event_pool_position = func.event_start;
-
-                printf("[CALL] %s (start=%d, count=%d)\n",
-                    funcname, func.event_start, func.event_count);
-                NEED_MORE_EVENTS = true;
-
-            }
-            break;
-
-            }
-        if(isnext_needed)nextEvent();
+            std::cout << "[OPERATION] " << var << " op=" << (int)op << "\n";
+        }
+        break;
+        case 17:
+        { // wait n ms
+            earg *a = &apool[current_event->args_offset];
+            uint32_t t_ = a->value;
+            float t = t_ / 1000.0;
+            log("[WAIT]" + std::to_string(t));
+            wait_timer = t;
+            WAITING = true;
+            // не вызываем nextEvent — просто ждём
+            isnext_needed = false;
+        }
+        break;
+        }
+        if (isnext_needed)
+            nextEvent();
     }
 
-    void handleMouseEvent(const SDL_Event& e)
+    void handleMouseEvent(const SDL_Event &e)
     {
         if (e.type == SDL_MOUSEBUTTONDOWN)
-            {
-                px = e.button.x;
-                py = e.button.y;
-            }
+        {
+            px = e.button.x;
+            py = e.button.y;
+        }
 
         if (e.type == SDL_MOUSEBUTTONUP)
-            {
-                int px = e.button.x;
-                int py = e.button.y;
+        {
+            int px = e.button.x;
+            int py = e.button.y;
 
-                if (e.button.button == SDL_BUTTON_LEFT)
-                    {
-                        handleEvent();
-                    }
-                else if (e.button.button == SDL_BUTTON_RIGHT)
-                    {
-                    }
+            if (e.button.button == SDL_BUTTON_LEFT)
+            {
+                if(!WAITING)handleEvent();
             }
+            else if (e.button.button == SDL_BUTTON_RIGHT)
+            {
+            }
+        }
     }
 
-    void run(abool& run)
+    void run(abool &run)
     {
-        int i=0;
+        int i = 0;
         do
-            {
-                std::cout<<get_from_spool(i)<<strlen(get_from_spool(i))<<"\n";
-                while(*get_from_spool(i) != ENDSTR) i+=1;
-                i+=1;
+        {
+            std::cout << get_from_spool(i) << strlen(get_from_spool(i)) << "\n";
+            while (*get_from_spool(i) != ENDSTR)
+                i += 1;
+            i += 1;
 
-            }
-        while(i < spos);
-        i=0;
+        } while (i < spos);
+        i = 0;
         do
-            {
-                std::cout<<i<<int(get_from_epool(i)->id)<<"\n";
-                i+=1;
+        {
+            std::cout << i << int(get_from_epool(i)->id) << "\n";
+            i += 1;
 
-            }
-        while(i < event_pool_position);
+        } while (i < event_pool_position);
         last_time = SDL_GetTicks();
         list_scenes(scenes);
 
@@ -391,52 +470,64 @@ public:
         handleEvent();
         textbox.update_position(width, height);
         while (run && running)
+        {
+
+            // events
+            while (SDL_PollEvent(&e))
             {
-
-                // events
-                while (SDL_PollEvent(&e))
+                if (e.type == SDL_QUIT)
+                {
+                    exit(0);
+                }
+                handleMouseEvent(e);
+                if (e.type == SDL_KEYDOWN)
+                {
+                    SDL_Keymod mod = SDL_GetModState();
+                    if (mod & KMOD_CTRL)
                     {
-                        if (e.type == SDL_QUIT)
-                            {
-                                exit(0);
-                            }
-                        handleMouseEvent(e);
-                        if (e.type == SDL_KEYDOWN){
-                            SDL_Keymod mod = SDL_GetModState();
-                            if (mod & KMOD_CTRL){
-                                if ((e.key.keysym.sym == SDLK_EQUALS && (mod & KMOD_SHIFT)) || e.key.keysym.sym == SDLK_KP_PLUS){
-                                    main_font.setSize(main_font.size + 5);
-
-                                }
-                                else if (e.key.keysym.sym == SDLK_MINUS || e.key.keysym.sym == SDLK_KP_MINUS){
-                                    main_font.setSize(main_font.size - 5);
-
-                                }
-                            }
+                        if ((e.key.keysym.sym == SDLK_EQUALS && (mod & KMOD_SHIFT)) || e.key.keysym.sym == SDLK_KP_PLUS)
+                        {
+                            main_font.setSize(main_font.size + 5);
+                        }
+                        else if (e.key.keysym.sym == SDLK_MINUS || e.key.keysym.sym == SDLK_KP_MINUS)
+                        {
+                            main_font.setSize(main_font.size - 5);
                         }
                     }
-                if(NEED_MORE_EVENTS)
-                    {
-                        NEED_MORE_EVENTS=0;
-                        handleEvent();
-                    }
-
-                uint32_t current_time = SDL_GetTicks();
-                float delta_time = (current_time - last_time) / 1000.0f;
-                last_time = current_time;
-                textbox.update(delta_time);
-                bg.update(delta_time);
-
-                SDL_RenderClear(renderer);
-                bg.draw(renderer);
-                for_each(sprites.begin(), sprites.end(), [this, delta_time](Sprite& sprite) {sprite.update(delta_time);
-                
-                    sprite.draw(renderer);});
-
-                textbox.draw(renderer);
-
-                SDL_RenderPresent(renderer);
+                }
             }
+            if (NEED_MORE_EVENTS)
+            {
+                NEED_MORE_EVENTS = 0;
+                handleEvent();
+            }
+
+            uint32_t current_time = SDL_GetTicks();
+            float delta_time = (current_time - last_time) / 1000.0f;
+            last_time = current_time;
+            if (WAITING)
+            {
+                wait_timer -= delta_time;
+                if (wait_timer <= 0.0f)
+                {
+                    WAITING = false;
+                    NEED_MORE_EVENTS = true;
+                }
+            }
+            textbox.update(delta_time);
+            bg.update(delta_time);
+
+            SDL_RenderClear(renderer);
+            bg.draw(renderer);
+            for_each(sprites.begin(), sprites.end(), [this, delta_time](Sprite &sprite)
+                     {sprite.update(delta_time);
+                
+                    sprite.draw(renderer); });
+
+            textbox.draw(renderer);
+
+            SDL_RenderPresent(renderer);
+        }
     }
 
     void clean()
@@ -445,13 +536,15 @@ public:
         TTF_Quit();
         IMG_Quit();
 
-        if (renderer) SDL_DestroyRenderer(renderer);
-        if (window) SDL_DestroyWindow(window);
+        if (renderer)
+            SDL_DestroyRenderer(renderer);
+        if (window)
+            SDL_DestroyWindow(window);
 
         SDL_Quit();
     }
 
-    SDL_Renderer* getRenderer() const
+    SDL_Renderer *getRenderer() const
     {
         return renderer;
     }
