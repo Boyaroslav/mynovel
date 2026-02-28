@@ -21,15 +21,15 @@ const event_type event_types[]= {
     {1, 1, "TXT"},
     {2, 1, "ROW"}, // следующие n комманд выполняются сразу
     {3, 1, "BG"},
-    {4, 1, "LD"},
+    {4, 1, "LD"}, // ${LID}
     {5, 1, "LID"},
     {6, 2, "ALIAS"},
     {7, 2, "CHSPR"},
     {8, 1, "RET"}, // -1 mainscreen -2 outofgame 
     {9, 2, "SET"},
-    {10, 4, "MV"},
+    {10, 4, "MV"}, //
     {11, 0, "CLTB"}, // clear textbox
-    {12, 3, "LDSIZE"}, // change size of sprite in px
+    {12, 4, "LDSIZE"}, // TODO сделать чтоб она текущий ищменяла + время операции добавить
     {13, 5, "LDXYWH"}, // LD with x y w and h
     {14, 1, "CALL"}, // ну пока хз но скорее всего функции буду вызывать
     {15, 3, "OPERATION"}, // операции над переменными

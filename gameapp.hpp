@@ -5,11 +5,18 @@
 #include "loader.hpp"
 #include "textbox.cpp"
 #include "sprite.hpp"
+#include <setjmp.h>
 
-struct callframe
+struct CallFrame
 {
-    Scene *s;
-    int ret_pos;
+    int return_pos;
+    int commands_left;
+};
+
+struct RowFrame
+{
+    int total;
+    int executed;
 };
 
 class Screen
@@ -21,6 +28,13 @@ private:
     int event_pool_position = 0;
     uint32_t last_time;
     TextBox textbox;
+    // стек вызовов функций
+    std::vector<CallFrame> call_stack;
+    jmp_buf row_resume_jmp;
+    jmp_buf row_wait_jmp;
+
+    // стек ROW (на случай вложенных ROW)
+    std::vector<RowFrame> row_stack;
 
     int row_n = 0;
     int row_executed = 0;
@@ -192,13 +206,24 @@ public:
 
         case 2: // ROW
         {
-            earg *a = &apool[current_event->args_offset];
-            const char *row = get_from_spool(a->value);
-            int n = a->value;
-            for (int i = 0; i < n; i++)
+            if (!IN_ROW)
             {
-                nextEvent();
-                handleEvent(false);
+                earg *a = &apool[current_event->args_offset];
+                const char *row = get_from_spool(a->value);
+                int n = a->value;
+                IN_ROW = 1;
+                int executed = 0;
+
+                while (executed < n)
+                {
+                    nextEvent();
+                    handleEvent(false);
+                    // считаем только если не внутри функции
+                    if (function_commands_left == 0)
+                        executed++;
+                }
+                IN_ROW = false;
+                // nextEvent(); handleEvent();
             }
         }
         break;
@@ -370,7 +395,8 @@ public:
 
             printf("[CALL] %s (start=%d, count=%d)\n",
                    funcname, func.event_start, func.event_count);
-            NEED_MORE_EVENTS = true;
+            if (!IN_ROW)
+                NEED_MORE_EVENTS = true;
         }
         break;
         case 15: // OPERATION var op val
@@ -405,16 +431,20 @@ public:
             std::cout << "[OPERATION] " << var << " op=" << (int)op << "\n";
         }
         break;
-        case 17:
-        { // wait n ms
-            earg *a = &apool[current_event->args_offset];
-            uint32_t t_ = a->value;
-            float t = t_ / 1000.0;
-            log("[WAIT]" + std::to_string(t));
+        case 17: // WAIT
+        {
+            float t = apool[current_event->args_offset].value / 1000.0f;
+            log("[WAIT] " + std::to_string(t) + "s");
             wait_timer = t;
             WAITING = true;
-            // не вызываем nextEvent — просто ждём
             isnext_needed = false;
+            while (WAITING)
+            {
+                while (SDL_PollEvent(&e))
+                    if (e.type == SDL_QUIT)
+                        exit(0);
+                update_and_render();
+            }
         }
         break;
         }
@@ -437,7 +467,8 @@ public:
 
             if (e.button.button == SDL_BUTTON_LEFT)
             {
-                if(!WAITING)handleEvent();
+                if (!WAITING)
+                    handleEvent();
             }
             else if (e.button.button == SDL_BUTTON_RIGHT)
             {
@@ -501,33 +532,38 @@ public:
                 NEED_MORE_EVENTS = 0;
                 handleEvent();
             }
+            update_and_render();
+        }
+    }
+    void update_and_render()
+    {
+        uint32_t current_time = SDL_GetTicks();
+        float delta_time = (current_time - last_time) / 1000.0f;
+        last_time = current_time;
 
-            uint32_t current_time = SDL_GetTicks();
-            float delta_time = (current_time - last_time) / 1000.0f;
-            last_time = current_time;
-            if (WAITING)
+        if (WAITING)
+        {
+            wait_timer -= delta_time;
+            if (wait_timer <= 0.0f)
             {
-                wait_timer -= delta_time;
-                if (wait_timer <= 0.0f)
+                WAITING = false;
+                if (!IN_ROW)
                 {
-                    WAITING = false;
+                    nextEvent();
                     NEED_MORE_EVENTS = true;
                 }
             }
-            textbox.update(delta_time);
-            bg.update(delta_time);
-
-            SDL_RenderClear(renderer);
-            bg.draw(renderer);
-            for_each(sprites.begin(), sprites.end(), [this, delta_time](Sprite &sprite)
-                     {sprite.update(delta_time);
-                
-                    sprite.draw(renderer); });
-
-            textbox.draw(renderer);
-
-            SDL_RenderPresent(renderer);
         }
+
+        textbox.update(delta_time);
+        bg.update(delta_time);
+
+        SDL_RenderClear(renderer);
+        bg.draw(renderer);
+        for_each(sprites.begin(), sprites.end(), [this, delta_time](Sprite &sprite)
+                 { sprite.update(delta_time); sprite.draw(renderer); });
+        textbox.draw(renderer);
+        SDL_RenderPresent(renderer);
     }
 
     void clean()
