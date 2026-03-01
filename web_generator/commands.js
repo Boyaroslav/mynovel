@@ -96,6 +96,18 @@ Blockly.Blocks['TXT'] = {
   }
 };
 
+Blockly.Blocks['LUA'] = {
+  init: function () {
+    this.appendValueInput("TEXT")
+      .setCheck("String")
+      .appendField("LUA");
+    this.setPreviousStatement(true);
+    this.setNextStatement(true);
+    this.setColour(COL_TEXT);
+  }
+};
+
+
 Blockly.Blocks['WAIT'] = {
   init: function () {
     this.appendValueInput("WAIT")
@@ -301,6 +313,7 @@ const COMMANDS_TOOLBOX = {
       "colour": COL_TEXT, 
       "contents":[
         { "kind":"block","type":"TXT" },
+        { "kind":"block","type":"LUA" },
         { "kind":"block","type":"CLTB" },
         { "kind":"block","type":"ROW" },
         { "kind":"sep" },

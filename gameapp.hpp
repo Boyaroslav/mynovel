@@ -32,6 +32,7 @@ private:
     std::vector<CallFrame> call_stack;
     jmp_buf row_resume_jmp;
     jmp_buf row_wait_jmp;
+    lua_State *L = nullptr;
 
     // стек ROW (на случай вложенных ROW)
     std::vector<RowFrame> row_stack;
@@ -123,6 +124,8 @@ public:
         main_font = Font();
         main_font.load();
         vars_init();
+        L = luaL_newstate();
+        luaL_openlibs(L);
         SDL_SetWindowTitle(window, (const char *)get_value("WINDOW_TITLE"));
 
         textbox = TextBox();
@@ -444,6 +447,62 @@ public:
                     if (e.type == SDL_QUIT)
                         exit(0);
                 update_and_render();
+            }
+        }
+        break;
+
+        case 20:
+        {
+
+            std::string code = std::string(get_from_spool(apool[current_event->args_offset].value));
+
+            // переменные движка → Lua
+            for (auto &[key, val] : variables)
+            {
+                if (val.is_int())
+                    lua_pushinteger(L, val.as_int());
+                else if (val.is_float())
+                    lua_pushnumber(L, val.as_float());
+                else
+                    lua_pushstring(L, val.as_string().c_str());
+                lua_setglobal(L, key.c_str());
+            }
+            std::string src;
+
+
+            if (code[0] == '=')
+                src = std::string("__ret=(function() return") + code.substr(1) + " end)()";
+            else  src = code;
+            if (luaL_dostring(L, src.c_str()) != LUA_OK)
+            {
+                printf("[LUA] %s\n", lua_tostring(L, -1));
+                lua_pop(L, 1);
+                break;
+            }
+
+            // __ret → variables["__return"]
+            lua_getglobal(L, "__ret");
+            if (lua_isinteger(L, -1))
+                variables["__return"] = make_var((uint32_t)lua_tointeger(L, -1));
+            else if (lua_isnumber(L, -1))
+                variables["__return"] = make_var((double)lua_tonumber(L, -1));
+            else if (lua_isstring(L, -1))
+                variables["__return"] = make_var(std::string(lua_tostring(L, -1)));
+            else if (lua_isboolean(L, -1))
+                variables["__return"] = make_var((uint32_t)lua_toboolean(L, -1));
+            lua_pop(L, 1);
+
+            // Lua globals → variables
+            for (auto &[key, val] : variables)
+            {
+                lua_getglobal(L, key.c_str());
+                if (lua_isinteger(L, -1))
+                    val = make_var((uint32_t)lua_tointeger(L, -1));
+                else if (lua_isnumber(L, -1))
+                    val = make_var((double)lua_tonumber(L, -1));
+                else if (lua_isstring(L, -1))
+                    val = make_var(std::string(lua_tostring(L, -1)));
+                lua_pop(L, 1);
             }
         }
         break;

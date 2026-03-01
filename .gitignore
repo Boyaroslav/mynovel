@@ -8,3 +8,14 @@ CMakeCache.txt
 cmake_install.cmake
 *Makefile*
 a.out
+CMakeCache.txt
+CMakeFiles/
+Makefile
+cmake_install.cmake
+*.a
+*.o
+*.d
+main
+scene.bin
+.vscode/
+.idea/

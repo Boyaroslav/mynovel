@@ -169,6 +169,12 @@ document.addEventListener('keydown', (e) => {
         text = cleanValue(text);
         return `TXT "${text}"\n`;
       };
+      jsGenerator.forBlock['LUA'] = function (block) {
+          let text = jsGenerator.valueToCode(block, "TEXT", jsGenerator.ORDER_ATOMIC) || `""`;
+          text = cleanValue(text);
+          text = text.replace(/\\'/g, "'").replace(/\\"/g, '"');
+          return `LUA "${text}"\n`;
+      };
       
       jsGenerator.forBlock['ROW'] = function (block){
         console.log(block);
