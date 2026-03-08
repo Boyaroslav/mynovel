@@ -96,6 +96,10 @@ void TextBox::cl(){
     messages.clear();
 }
 
+void TextBox::cllast(){
+    messages.pop_back();
+}
+
 
 void TextBox::update_position(int w, int h) {
     border.x = TEXT_BOX_HORIZONTAL_PADDING;

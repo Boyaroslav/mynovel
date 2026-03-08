@@ -35,9 +35,11 @@ const event_type event_types[]= {
     {15, 3, "OPERATION"}, // операции над переменными
     {16, 2, "TBCAP"}, // change textbox footer text - name of talking character and so on
     {17, 2, "WAIT"}, // таймер
-    {18, 3, "IF"},
+    {18, 3, "IF"}, // earg (><==) earg -> можно использовать __return == 1 коли сложная логика нужна
     {19, 2, "JMP"}, // думаю либо можно будет номер команды указать, либо метку __METKA0808 сделаю возможность создавать их по ходу пьесы 
-    {20, 2, "LUA"} // execute LUA string 
+    {20, 2, "LUA"}, // execute LUA string 
+    {21, 0, "ELSE"},
+    {22, 0, "ENDIF"}
     
 
 

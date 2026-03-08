@@ -175,6 +175,28 @@ document.addEventListener('keydown', (e) => {
           text = text.replace(/\\'/g, "'").replace(/\\"/g, '"');
           return `LUA "${text}"\n`;
       };
+      jsGenerator.forBlock['IF'] = function (block) {
+          let var_ = jsGenerator.valueToCode(block, "VAR", jsGenerator.ORDER_ATOMIC) || '""';
+          var_ = cleanValue(var_);
+          
+          let op = block.getFieldValue("OP");
+          
+          let val = jsGenerator.valueToCode(block, "VAL", jsGenerator.ORDER_ATOMIC) || '""';
+          let val_clean = cleanValue(val);
+          let val_fmt = val.match(/^-?\d+\.?\d*$/) ? formatNumber(val) : `"${val_clean}"`;
+
+          let then_branch = jsGenerator.statementToCode(block, "THEN").replace(/^\s+/gm, '');
+          let else_branch = jsGenerator.statementToCode(block, "ELSE").replace(/^\s+/gm, '');
+
+          let out = `IF "${var_}" ${op} ${val_fmt}\n`;
+          out += then_branch;
+          if (else_branch.trim()) {
+              out += `ELSE\n`;
+              out += else_branch;
+          }
+          out += `ENDIF\n`;
+          return out;
+      };
       
       jsGenerator.forBlock['ROW'] = function (block){
         console.log(block);

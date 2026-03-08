@@ -7,17 +7,9 @@
 #include "sprite.hpp"
 #include <setjmp.h>
 
-struct CallFrame
-{
-    int return_pos;
-    int commands_left;
-};
-
-struct RowFrame
-{
-    int total;
-    int executed;
-};
+#define LUA_COMMAND_ADD_MESSAGE_TO_TEXTBOX "txt"
+#define LUA_COMMAND_CLEAR_TEXTBOX "cltb"
+#define LUA_COMMAND_CLEAR_ONE_MESSAGE "cllast"
 
 class Screen
 {
@@ -28,14 +20,10 @@ private:
     int event_pool_position = 0;
     uint32_t last_time;
     TextBox textbox;
-    // стек вызовов функций
-    std::vector<CallFrame> call_stack;
     jmp_buf row_resume_jmp;
     jmp_buf row_wait_jmp;
+    bool if_result = 1;
     lua_State *L = nullptr;
-
-    // стек ROW (на случай вложенных ROW)
-    std::vector<RowFrame> row_stack;
 
     int row_n = 0;
     int row_executed = 0;
@@ -129,6 +117,30 @@ public:
         SDL_SetWindowTitle(window, (const char *)get_value("WINDOW_TITLE"));
 
         textbox = TextBox();
+        lua_pushlightuserdata(L, this);
+        lua_pushcclosure(L, [](lua_State *L) -> int {
+            Screen *self = (Screen *)lua_touserdata(L, lua_upvalueindex(1));
+            const char *text = luaL_checkstring(L, 1);
+            self->textbox.addMessage(std::string(text));
+            return 0;
+        }, 1);
+        lua_setglobal(L, LUA_COMMAND_ADD_MESSAGE_TO_TEXTBOX);
+
+        // cl (clear)
+        lua_pushlightuserdata(L, this);
+        lua_pushcclosure(L, [](lua_State *L) -> int {
+            Screen *self = (Screen *)lua_touserdata(L, lua_upvalueindex(1));
+            self->textbox.cl();
+            return 0;
+        }, 1);
+        lua_setglobal(L, LUA_COMMAND_CLEAR_TEXTBOX);
+                lua_pushlightuserdata(L, this);
+        lua_pushcclosure(L, [](lua_State *L) -> int {
+            Screen *self = (Screen *)lua_touserdata(L, lua_upvalueindex(1));
+            self->textbox.cllast();
+            return 0;
+        }, 1);
+        lua_setglobal(L, LUA_COMMAND_CLEAR_ONE_MESSAGE);
         // bg.load_texture(renderer, "picture.png");
 
         return true;
@@ -193,6 +205,15 @@ public:
 
     void handleEvent(bool isnext_needed = true)
     {
+        if (!if_result &&
+            current_event->id != 21 &&
+            current_event->id != 22)
+        {
+            if (isnext_needed)
+                nextEvent();
+            NEED_MORE_EVENTS=1;
+            return;
+        }
 
         switch (current_event->id)
         {
@@ -451,7 +472,58 @@ public:
         }
         break;
 
-        case 20:
+        case 18: // IF
+        {
+            earg &f = apool[current_event->args_offset];
+            std::string op = get_from_spool(apool[current_event->args_offset + 1].value);
+            earg &s = apool[current_event->args_offset + 2];
+
+            Var left, right;
+
+            if (f.type == ARG_STRING)
+                left = get_value(get_from_spool(f.value)); // имя переменной → её значение
+            else
+                left = make_var((uint32_t)f.value);
+
+            if (s.type == ARG_STRING)
+                right = get_value(get_from_spool(s.value));
+            else
+                right = make_var((uint32_t)s.value);
+
+            // сравниваем как строки если хоть один строковый
+            if (left.is_string() || right.is_string())
+            {
+                std::string l = left.as_string();
+                std::string r = right.as_string();
+                if (op == "==")
+                    if_result = l == r;
+                else if (op == "!=")
+                    if_result = l != r;
+                else
+                    if_result = false;
+            }
+            else
+            {
+                double l = left.is_float() ? left.as_float() : left.as_int();
+                double r = right.is_float() ? right.as_float() : right.as_int();
+                if (op == "==")
+                    if_result = l == r;
+                else if (op == "!=")
+                    if_result = l != r;
+                else if (op == ">")
+                    if_result = l > r;
+                else if (op == "<")
+                    if_result = l < r;
+                else if (op == ">=")
+                    if_result = l >= r;
+                else if (op == "<=")
+                    if_result = l <= r;
+            }
+            NEED_MORE_EVENTS=1;
+        }
+        break;
+
+        case 20: // LUA
         {
 
             std::string code = std::string(get_from_spool(apool[current_event->args_offset].value));
@@ -469,10 +541,10 @@ public:
             }
             std::string src;
 
-
             if (code[0] == '=')
                 src = std::string("__ret=(function() return") + code.substr(1) + " end)()";
-            else  src = code;
+            else
+                src = code;
             if (luaL_dostring(L, src.c_str()) != LUA_OK)
             {
                 printf("[LUA] %s\n", lua_tostring(L, -1));
@@ -506,6 +578,17 @@ public:
             }
         }
         break;
+        case 21:
+        {
+            if_result = !if_result;
+            NEED_MORE_EVENTS=1;
+        }
+        break;
+        case 22:
+        { // ENDIF
+            if_result = true;
+            NEED_MORE_EVENTS=1;
+        }
         }
         if (isnext_needed)
             nextEvent();

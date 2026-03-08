@@ -22,6 +22,7 @@ class TextBox{
 
         void addMessage(std::string);
         void cl();
+        void cllast();
         void draw(SDL_Renderer*);
         void update(float);
         void done_messages();

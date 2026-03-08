@@ -95,6 +95,33 @@ Blockly.Blocks['TXT'] = {
     this.setColour(COL_TEXT);
   }
 };
+Blockly.Blocks['IF'] = {
+  init: function () {
+    this.appendValueInput("VAR")
+      .setCheck("String")
+      .appendField("IF");
+    this.appendDummyInput()
+      .appendField(new Blockly.FieldDropdown([
+        ["==", "=="],
+        ["!=", "!="],
+        [">",  ">"],
+        ["<",  "<"],
+        [">=", ">="],
+        ["<=", "<="]
+      ]), "OP");
+    this.appendValueInput("VAL")
+      .setCheck(["String", "Number"]);
+    this.appendStatementInput("THEN")
+      .setCheck(null)
+      .appendField("THEN");
+    this.appendStatementInput("ELSE")
+      .setCheck(null)
+      .appendField("ELSE");
+    this.setPreviousStatement(true);
+    this.setNextStatement(true);
+    this.setColour(COL_LOGIC);
+  }
+};
 
 Blockly.Blocks['LUA'] = {
   init: function () {
@@ -339,6 +366,7 @@ const COMMANDS_TOOLBOX = {
       "colour": COL_LOGIC, 
       "contents":[
         { "kind":"block","type":"ALIAS" },
+        { "kind":"block","type":"IF" },
         { "kind":"block","type":"SET" },
         { "kind":"block","type":"RET" },
         { "kind":"block","type":"OPERATION" }
