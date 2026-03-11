@@ -6,6 +6,7 @@ a.out
 tr.txt
 *.zip
 *.json
+.DS_Store
 lcnovel
 dumper
 CMakeCache.txt

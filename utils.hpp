@@ -151,3 +151,11 @@ static std::string utf8_substr(const std::string &s, size_t start, size_t count)
 
     return s.substr(pos, i - pos);
 }
+
+bool has_extension(const char *name, const char *ext)
+{
+    const char *dot = strrchr(name, '.');
+    if (!dot)
+        return false;
+    return strcmp(dot, ext) == 0;
+}

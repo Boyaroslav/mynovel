@@ -7,25 +7,65 @@
 #include <string.h>
 #include "pool.hpp"
 
+int load_ccnvl(const char *filename, std::vector<Scene> &sc_out, int *out_count)
+{
+    FILE *f = fopen(filename, "rb");
+    if (!f)
+    {
+        perror("Cannot open CCNVL file");
+        return 0;
+    }
 
-int load_file(const char* filename, std::vector<Scene>& sc_out, int* out_count) {
+    char magic[6] = {0};
+    fread(magic, 1, 5, f);
+
+    if (strncmp(magic, "CCNVL", 5) != 0)
+    {
+        printf("Invalid CCNVL file\n");
+        fclose(f);
+        return 0;
+    }
+
+    uint8_t version;
+    fread(&version, 1, 1, f);
+
+    printf("CCNVL version %d loaded\n", version);
+
+    fclose(f);
+
+    return 1;
+}
+
+int load_file(const char *filename, std::vector<Scene> &sc_out, int *out_count)
+{
+
+    if (has_extension(filename, ".ccnvl"))
+    {
+        IS_CCNVL = true;
+        return load_ccnvl(filename, sc_out, out_count);
+    }
+
+    IS_CCNVL = false;
     sc_out.clear();
 
-    FILE* f = fopen(filename, "rb");
-    if (!f) {
+    FILE *f = fopen(filename, "rb");
+    if (!f)
+    {
         perror("Cannot open file");
         return 0;
     }
 
     int scene_count;
-    if (fread(&scene_count, sizeof(int), 1, f) != 1) {
+    if (fread(&scene_count, sizeof(int), 1, f) != 1)
+    {
         fclose(f);
         return 0;
     }
 
     sc_out.resize(scene_count);
 
-    if (fread(sc_out.data(), sizeof(Scene), scene_count, f) != scene_count) {
+    if (fread(sc_out.data(), sizeof(Scene), scene_count, f) != scene_count)
+    {
         fclose(f);
         return 0;
     }
@@ -34,7 +74,8 @@ int load_file(const char* filename, std::vector<Scene>& sc_out, int* out_count) 
     int total_args = 0;
     int total_strings = 0;
 
-    for (int i = 0; i < scene_count; i++) {
+    for (int i = 0; i < scene_count; i++)
+    {
         total_events += sc_out[i].event_count;
         total_args += sc_out[i].string_size; // wrong — fix below
     }
@@ -43,27 +84,32 @@ int load_file(const char* filename, std::vector<Scene>& sc_out, int* out_count) 
     total_args = 0;
     total_strings = 0;
 
-    for (int i = 0; i < scene_count; i++) {
+    for (int i = 0; i < scene_count; i++)
+    {
         total_events += sc_out[i].event_count;
         total_strings += sc_out[i].string_size;
     }
 
     std::vector<Event> evs(total_events);
-    if (fread(evs.data(), sizeof(Event), total_events, f) != total_events) {
+    if (fread(evs.data(), sizeof(Event), total_events, f) != total_events)
+    {
         fclose(f);
         return 0;
     }
 
-    for (auto& e : evs) total_args += e.args_count;
+    for (auto &e : evs)
+        total_args += e.args_count;
 
     std::vector<earg> args(total_args);
-    if (fread(args.data(), sizeof(earg), total_args, f) != total_args) {
+    if (fread(args.data(), sizeof(earg), total_args, f) != total_args)
+    {
         fclose(f);
         return 0;
     }
 
     std::vector<char> strings(total_strings);
-    if (fread(strings.data(), 1, total_strings, f) != total_strings) {
+    if (fread(strings.data(), 1, total_strings, f) != total_strings)
+    {
         fclose(f);
         return 0;
     }
@@ -75,43 +121,52 @@ int load_file(const char* filename, std::vector<Scene>& sc_out, int* out_count) 
     spos += total_strings;
 
     int base_apos = apos;
-    for (auto& a : args) {
+    for (auto &a : args)
+    {
         earg t = a;
-        if (t.type == ARG_STRING) {
+        if (t.type == ARG_STRING)
+        {
             t.value += base_spos;
         }
         apool[apos++] = t;
     }
 
     int base_epos = epos;
-    for (auto& e : evs) {
+    for (auto &e : evs)
+    {
         Event t = e;
         t.args_offset += base_apos;
         epool[epos++] = t;
     }
 
-    for (auto& sc : sc_out) {
+    for (auto &sc : sc_out)
+    {
         sc.event_start += base_epos;
         sc.string_start += base_spos;
     }
 
-    if (out_count) *out_count = scene_count;
+    if (out_count)
+        *out_count = scene_count;
     return 1;
 }
 
-
-int find_scene_index_by_name(const std::vector<Scene>& scenes, const std::string& name) {
-    for (size_t i = 0; i < scenes.size(); i++) {
-        std::cout<<scenes[i].name<<" "<<name.c_str()<<"\n";
-        if (strcmp(scenes[i].name, name.c_str()) == 0) {
+int find_scene_index_by_name(const std::vector<Scene> &scenes, const std::string &name)
+{
+    for (size_t i = 0; i < scenes.size(); i++)
+    {
+        std::cout << scenes[i].name << " " << name.c_str() << "\n";
+        if (strcmp(scenes[i].name, name.c_str()) == 0)
+        {
             return static_cast<int>(i);
         }
     }
     return -1;
 }
 
-void list_scenes(const std::vector<Scene>& scenes){
-    for(int i=0; i<scenes.size(); i++){
-        std::cout<<"SCENE "<<i<<" "<<scenes[i].name<<"\n";
+void list_scenes(const std::vector<Scene> &scenes)
+{
+    for (int i = 0; i < scenes.size(); i++)
+    {
+        std::cout << "SCENE " << i << " " << scenes[i].name << "\n";
     }
 }
