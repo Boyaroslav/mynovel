@@ -239,6 +239,13 @@ document.addEventListener('keydown', (e) => {
         char = cleanValue(char);
         return `LD "${char}"\n`;
       };
+
+      jsGenerator.forBlock['LDFILE'] = function (block){
+        console.log(block);
+        let char = jsGenerator.valueToCode(block, "CHAR", jsGenerator.ORDER_ATOMIC) || `""`;
+        char = cleanValue(char);
+        return `LDFILE "${char}"\n`;
+      };
       
       // LID - 1 аргумент (число)
       jsGenerator.forBlock['LID'] = function (block){
@@ -296,7 +303,40 @@ document.addEventListener('keydown', (e) => {
           return `OPERATION "${variable}" ${opChar} ${value}\n`;
         }
       };
-            
+      jsGenerator.forBlock['BPM'] = function (block){
+        let name = jsGenerator.valueToCode(block, "NAME", jsGenerator.ORDER_ATOMIC) || `""`;
+        name = cleanValue(name);
+        return `BPM "${name}"\n`;
+      };
+      jsGenerator.forBlock['SOUND'] = function (block){
+        let name = jsGenerator.valueToCode(block, "NAME", jsGenerator.ORDER_ATOMIC) || `""`;
+        name = cleanValue(name);
+        return `SOUND "${name}"\n`;
+      };
+      jsGenerator.forBlock['BPMFADE'] = function (block){
+        let time = jsGenerator.valueToCode(block, "TIME", jsGenerator.ORDER_ATOMIC) || "0";
+        return `BPMFADE ${time}\n`;
+      };
+      jsGenerator.forBlock['JMP'] = function (block){
+        let target = jsGenerator.valueToCode(block, "TARGET", jsGenerator.ORDER_ATOMIC) || `""`;
+        target = cleanValue(target);
+        return `JMP "${target}"\n`;
+      };
+      jsGenerator.forBlock['TBCAP'] = function (block){
+        let name = jsGenerator.valueToCode(block, "NAME", jsGenerator.ORDER_ATOMIC) || `""`;
+        let text = jsGenerator.valueToCode(block, "TEXT", jsGenerator.ORDER_ATOMIC) || `""`;
+
+        name = cleanValue(name);
+        text = cleanValue(text);
+
+        return `TBCAP "${name}" "${text}"\n`;
+      };
+      jsGenerator.forBlock['LUA_IMPORT'] = function (block){
+        let lib = jsGenerator.valueToCode(block, "LIB", jsGenerator.ORDER_ATOMIC) || `""`;
+        lib = cleanValue(lib);
+        return `LUA_IMPORT "${lib}"\n`;
+      };
+                  
       // CHSPR - 2 аргумента (персонаж → спрайт)
       jsGenerator.forBlock['CHSPR'] = function (block){
         console.log(block);

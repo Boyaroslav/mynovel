@@ -11,6 +11,13 @@
 #define LUA_COMMAND_CLEAR_TEXTBOX "cltb"
 #define LUA_COMMAND_CLEAR_ONE_MESSAGE "cllast"
 
+struct LuaCoroutine
+{
+    lua_State *co;
+    float wait_timer = 0.0f;
+    int lua_ref = LUA_NOREF;
+};
+
 class Screen
 {
 private:
@@ -24,6 +31,7 @@ private:
     jmp_buf row_wait_jmp;
     bool if_result = 1;
     lua_State *L = nullptr;
+    std::vector<LuaCoroutine> lua_active_coroutines;
 
     int row_n = 0;
     int row_executed = 0;
@@ -118,29 +126,36 @@ public:
 
         textbox = TextBox();
         lua_pushlightuserdata(L, this);
-        lua_pushcclosure(L, [](lua_State *L) -> int {
+        lua_pushcclosure(L, [](lua_State *L) -> int
+                         {
             Screen *self = (Screen *)lua_touserdata(L, lua_upvalueindex(1));
             const char *text = luaL_checkstring(L, 1);
             self->textbox.addMessage(std::string(text));
-            return 0;
-        }, 1);
+            return 0; }, 1);
         lua_setglobal(L, LUA_COMMAND_ADD_MESSAGE_TO_TEXTBOX);
 
         // cl (clear)
         lua_pushlightuserdata(L, this);
-        lua_pushcclosure(L, [](lua_State *L) -> int {
+        lua_pushcclosure(L, [](lua_State *L) -> int
+                         {
             Screen *self = (Screen *)lua_touserdata(L, lua_upvalueindex(1));
             self->textbox.cl();
-            return 0;
-        }, 1);
+            return 0; }, 1);
         lua_setglobal(L, LUA_COMMAND_CLEAR_TEXTBOX);
-                lua_pushlightuserdata(L, this);
-        lua_pushcclosure(L, [](lua_State *L) -> int {
+        lua_pushlightuserdata(L, this);
+        lua_pushcclosure(L, [](lua_State *L) -> int
+                         {
             Screen *self = (Screen *)lua_touserdata(L, lua_upvalueindex(1));
             self->textbox.cllast();
-            return 0;
-        }, 1);
+            return 0; }, 1);
         lua_setglobal(L, LUA_COMMAND_CLEAR_ONE_MESSAGE);
+        lua_pushcfunction(L, [](lua_State *L) -> int
+                          {
+                              float t = (float)luaL_checknumber(L, 1);
+                              lua_pushnumber(L, t);   // передаём таймер в C++ через стек
+                              return lua_yield(L, 1); // 1 = одно возвращаемое значение
+                          });
+        lua_setglobal(L, "wait");
         // bg.load_texture(renderer, "picture.png");
 
         return true;
@@ -149,6 +164,46 @@ public:
     void load_(char *name)
     {
         load_file(name, scenes, &scenes_number);
+    }
+    void sync_vars_to_lua(lua_State *state)
+    {
+        for (auto &[key, val] : variables)
+        {
+            if (val.is_int())
+                lua_pushinteger(state, val.as_int());
+            else if (val.is_float())
+                lua_pushnumber(state, val.as_float());
+            else
+                lua_pushstring(state, val.as_string().c_str());
+            lua_setglobal(state, key.c_str());
+        }
+    }
+
+    void sync_vars_from_lua(lua_State *state)
+    {
+        for (auto &[key, val] : variables)
+        {
+            lua_getglobal(state, key.c_str());
+            if (lua_isinteger(state, -1))
+                val = make_var((uint32_t)lua_tointeger(state, -1));
+            else if (lua_isnumber(state, -1))
+                val = make_var((double)lua_tonumber(state, -1));
+            else if (lua_isstring(state, -1))
+                val = make_var(std::string(lua_tostring(state, -1)));
+            lua_pop(state, 1);
+        }
+
+        // __ret → __return
+        lua_getglobal(state, "__ret");
+        if (lua_isinteger(state, -1))
+            variables["__return"] = make_var((uint32_t)lua_tointeger(state, -1));
+        else if (lua_isnumber(state, -1))
+            variables["__return"] = make_var((double)lua_tonumber(state, -1));
+        else if (lua_isstring(state, -1))
+            variables["__return"] = make_var(std::string(lua_tostring(state, -1)));
+        else if (lua_isboolean(state, -1))
+            variables["__return"] = make_var((uint32_t)lua_toboolean(state, -1));
+        lua_pop(state, 1);
     }
 
     void nextEvent()
@@ -203,15 +258,50 @@ public:
         return true;
     }
 
+    void handle_lua_coroutines(float delta_time)
+    {
+        for (auto it = lua_active_coroutines.begin(); it != lua_active_coroutines.end();)
+        {
+            if (it->wait_timer > 0.0f)
+            {
+                it->wait_timer -= delta_time;
+                ++it;
+                continue;
+            }
+
+            int nres = 0;
+            int status = lua_resume(it->co, L, 0, &nres);
+
+            if (status == LUA_YIELD)
+            {
+                if (nres > 0 && lua_isnumber(it->co, -1))
+                    it->wait_timer = (float)lua_tonumber(it->co, -1);
+                lua_pop(it->co, nres);
+                ++it;
+            }
+            else
+            {
+                if (status == LUA_OK)
+                    sync_vars_from_lua(it->co);
+                else
+                    printf("[LUA ERROR] %s\n", lua_tostring(it->co, -1));
+
+                luaL_unref(L, LUA_REGISTRYINDEX, it->lua_ref);
+                it = lua_active_coroutines.erase(it);
+            }
+        }
+    }
+
     void handleEvent(bool isnext_needed = true)
     {
+        std::cout<<"HE "<<(int)(current_event->id)<<" \n";
         if (!if_result &&
             current_event->id != 21 &&
             current_event->id != 22)
         {
             if (isnext_needed)
                 nextEvent();
-            NEED_MORE_EVENTS=1;
+            NEED_MORE_EVENTS = 1;
             return;
         }
 
@@ -519,76 +609,89 @@ public:
                 else if (op == "<=")
                     if_result = l <= r;
             }
-            NEED_MORE_EVENTS=1;
+            NEED_MORE_EVENTS = 1;
         }
         break;
 
         case 20: // LUA
         {
-
             std::string code = std::string(get_from_spool(apool[current_event->args_offset].value));
 
-            // переменные движка → Lua
-            for (auto &[key, val] : variables)
-            {
-                if (val.is_int())
-                    lua_pushinteger(L, val.as_int());
-                else if (val.is_float())
-                    lua_pushnumber(L, val.as_float());
-                else
-                    lua_pushstring(L, val.as_string().c_str());
-                lua_setglobal(L, key.c_str());
-            }
-            std::string src;
+            std::string src = (code[0] == '=')
+                                  ? "__ret=(function() return " + code.substr(1) + " end)()"
+                                  : code;
 
-            if (code[0] == '=')
-                src = std::string("__ret=(function() return") + code.substr(1) + " end)()";
-            else
-                src = code;
-            if (luaL_dostring(L, src.c_str()) != LUA_OK)
+            // создаём корутину и защищаем от GC
+            lua_State *co = lua_newthread(L);
+            lua_pushthread(co);
+            lua_xmove(co, L, 1);
+            int ref = luaL_ref(L, LUA_REGISTRYINDEX);
+
+            sync_vars_to_lua(co);
+
+            if (luaL_loadstring(co, src.c_str()) != LUA_OK)
             {
-                printf("[LUA] %s\n", lua_tostring(L, -1));
-                lua_pop(L, 1);
+                printf("[LUA ERROR] %s\n", lua_tostring(co, -1));
+                luaL_unref(L, LUA_REGISTRYINDEX, ref);
                 break;
             }
 
-            // __ret → variables["__return"]
-            lua_getglobal(L, "__ret");
-            if (lua_isinteger(L, -1))
-                variables["__return"] = make_var((uint32_t)lua_tointeger(L, -1));
-            else if (lua_isnumber(L, -1))
-                variables["__return"] = make_var((double)lua_tonumber(L, -1));
-            else if (lua_isstring(L, -1))
-                variables["__return"] = make_var(std::string(lua_tostring(L, -1)));
-            else if (lua_isboolean(L, -1))
-                variables["__return"] = make_var((uint32_t)lua_toboolean(L, -1));
-            lua_pop(L, 1);
+            int nres = 0;
+            int status = lua_resume(co, L, 0, &nres);
 
-            // Lua globals → variables
-            for (auto &[key, val] : variables)
+            if (status == LUA_YIELD)
             {
-                lua_getglobal(L, key.c_str());
-                if (lua_isinteger(L, -1))
-                    val = make_var((uint32_t)lua_tointeger(L, -1));
-                else if (lua_isnumber(L, -1))
-                    val = make_var((double)lua_tonumber(L, -1));
-                else if (lua_isstring(L, -1))
-                    val = make_var(std::string(lua_tostring(L, -1)));
-                lua_pop(L, 1);
+                // корутина ждёт — добавляем в активные
+                float t = (nres > 0 && lua_isnumber(co, -1)) ? (float)lua_tonumber(co, -1) : 0.0f;
+                lua_pop(co, nres);
+                lua_active_coroutines.push_back({co, t, ref});
+            }
+            else if (status == LUA_OK)
+            {
+                // завершилась сразу — синхронизируем и чистим
+                sync_vars_from_lua(co);
+                luaL_unref(L, LUA_REGISTRYINDEX, ref);
+            }
+            else
+            {
+                printf("[LUA ERROR] %s\n", lua_tostring(co, -1));
+                luaL_unref(L, LUA_REGISTRYINDEX, ref);
             }
         }
         break;
         case 21:
         {
             if_result = !if_result;
-            NEED_MORE_EVENTS=1;
+            NEED_MORE_EVENTS = 1;
         }
         break;
         case 22:
         { // ENDIF
             if_result = true;
-            NEED_MORE_EVENTS=1;
+            NEED_MORE_EVENTS = 1;
         }
+        break;
+        case 26: // LUA_IMPORT
+        {
+            const char *file = get_from_spool(apool[current_event->args_offset].value);
+
+            std::cout << "[LUA_IMPORT] " << file << "\n";
+
+            if (luaL_dofile(L, file) != LUA_OK)
+            {
+                printf("[LUA_IMPORT ERROR] %s\n", lua_tostring(L, -1));
+                lua_pop(L, 1);
+            }
+        }
+        break;
+        case 27: // LD_FILE
+        {
+            const char *file = get_from_spool(apool[current_event->args_offset].value);
+            log(std::string("LD_FILE ") + file);
+            load_(const_cast<char*>(file));
+            NEED_MORE_EVENTS = 1;
+        }
+        break;
         }
         if (isnext_needed)
             nextEvent();
@@ -682,6 +785,7 @@ public:
         uint32_t current_time = SDL_GetTicks();
         float delta_time = (current_time - last_time) / 1000.0f;
         last_time = current_time;
+        handle_lua_coroutines(delta_time);
 
         if (WAITING)
         {

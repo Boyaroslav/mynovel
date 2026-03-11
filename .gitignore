@@ -2,6 +2,10 @@
 *.bin
 *.jpg
 *.png
+a.out
+tr.txt
+*.zip
+*.json
 lcnovel
 dumper
 CMakeCache.txt

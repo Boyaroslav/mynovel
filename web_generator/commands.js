@@ -197,6 +197,17 @@ Blockly.Blocks['LD'] = {
   }
 };
 
+Blockly.Blocks['LDFILE'] = {
+  init: function () {
+    this.appendValueInput("CHAR")
+      .setCheck("String")
+      .appendField("LDFILE");
+    this.setPreviousStatement(true);
+    this.setNextStatement(true);
+    this.setColour(COL_GRAPH);
+  }
+};
+
 // LID
 Blockly.Blocks['LID'] = {
   init: function () {
@@ -317,6 +328,68 @@ Blockly.Blocks['LDXYWH'] = {
   }
 };
 
+Blockly.Blocks['BPM'] = {
+  init: function () {
+    this.appendValueInput("NAME")
+      .appendField("BPM");
+    this.setPreviousStatement(true);
+    this.setNextStatement(true);
+    this.setColour(20);
+  }
+};
+
+Blockly.Blocks['SOUND'] = {
+  init: function () {
+    this.appendValueInput("NAME")
+      .appendField("SOUND");
+    this.setPreviousStatement(true);
+    this.setNextStatement(true);
+    this.setColour(20);
+  }
+};
+
+Blockly.Blocks['BPMFADE'] = {
+  init: function () {
+    this.appendValueInput("TIME")
+      .appendField("BPM FADE");
+    this.setPreviousStatement(true);
+    this.setNextStatement(true);
+    this.setColour(20);
+  }
+};
+
+Blockly.Blocks['JMP'] = {
+  init: function () {
+    this.appendValueInput("TARGET")
+      .appendField("JMP");
+    this.setPreviousStatement(true);
+    this.setNextStatement(true);
+    this.setColour(COL_LOGIC);
+  }
+};
+
+Blockly.Blocks['TBCAP'] = {
+  init: function () {
+    this.appendValueInput("NAME")
+      .appendField("TBCAP name");
+    this.appendValueInput("TEXT")
+      .appendField("text");
+    this.setPreviousStatement(true);
+    this.setNextStatement(true);
+    this.setColour(COL_TEXT);
+  }
+};
+
+Blockly.Blocks['LUA_IMPORT'] = {
+  init: function () {
+    this.appendValueInput("LIB")
+      .appendField("LUA IMPORT");
+    this.setPreviousStatement(true);
+    this.setNextStatement(true);
+    this.setColour(COL_TEXT);
+  }
+};
+
 
 // ----------------------------
 // TOOLBOX (CATEGORIES)
@@ -342,6 +415,8 @@ const COMMANDS_TOOLBOX = {
         { "kind":"block","type":"TXT" },
         { "kind":"block","type":"LUA" },
         { "kind":"block","type":"CLTB" },
+        { "kind":"block","type":"TBCAP" },
+        { "kind":"block","type":"LUA_IMPORT" },
         { "kind":"block","type":"ROW" },
         { "kind":"sep" },
         { "kind":"block","type":"text" }
@@ -354,6 +429,7 @@ const COMMANDS_TOOLBOX = {
       "contents":[
         { "kind":"block","type":"BG" },
         { "kind":"block","type":"LD" },
+        { "kind":"block","type":"LDFILE" },
         { "kind":"block","type":"LID" },
         { "kind":"block","type":"LDSIZE" },
         { "kind":"block","type":"LDXYWH" },
@@ -367,9 +443,20 @@ const COMMANDS_TOOLBOX = {
       "contents":[
         { "kind":"block","type":"ALIAS" },
         { "kind":"block","type":"IF" },
+        { "kind":"block","type":"JMP" },
         { "kind":"block","type":"SET" },
         { "kind":"block","type":"RET" },
         { "kind":"block","type":"OPERATION" }
+      ]
+    },
+    { 
+      "kind": "category", 
+      "name": "Audio", 
+      "colour": 20, 
+      "contents":[
+        { "kind":"block","type":"BPM" },
+        { "kind":"block","type":"SOUND" },
+        { "kind":"block","type":"BPMFADE" }
       ]
     },
     { 
