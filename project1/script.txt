@@ -1,0 +1,7 @@
+SCRIPT main
+ROW 2
+BG "kashira.jpg"
+TXT "hi"
+TXT "im nifger"
+RET "finale"
+END

@@ -24,10 +24,23 @@ const int DEFAULT_FONT_SIZE = 28;
 const int TEXT_BOX_HORIZONTAL_PADDING = 100;
 const int TEXT_BOX_VERTICAL_PADDING = 20;
 
+
 bool IS_CCNVL = false; // если .bin то все как раньше. а если .ccnvl то будем по другому брать фотки, другие файлы там и тд
 
 // const char* DEFAULT_FONT = "FreeMono.ttf";
 const char *DEFAULT_FONT = "NotoSans_SemiCondensed-Regular.ttf";
+
+struct index_db_element{
+    uint32_t offset;
+    uint32_t size;
+
+};
+
+// в ccnvl будем хранить массив .bin чтобы по нему бегать и по названию быстренько загружать через load_scenes_from_memory
+
+// это будет использоваться только при основном режиме работы - чтении .CCNVL
+std::unordered_map<uint32_t, index_db_element>ccnvl_resources;
+std::unordered_map<uint32_t, index_db_element>ccnvl_scenes;
 
 void log(std::string msg)
 {
