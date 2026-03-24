@@ -163,7 +163,11 @@ public:
 
     void load_(char *name)
     {
+        scenes.clear();
+        if (!IS_CCNVL)
         load_file(name, scenes, &scenes_number);
+        else 
+        load_scene_by_name(name, scenes);
     }
     void sync_vars_to_lua(lua_State *state)
     {
@@ -688,7 +692,9 @@ public:
         {
             const char *file = get_from_spool(apool[current_event->args_offset].value);
             log(std::string("LD_FILE ") + file);
-            load_(const_cast<char*>(file));
+            this->load_(const_cast<char*>(file));
+            this->change_scene("main");
+
             NEED_MORE_EVENTS = 1;
         }
         break;
@@ -814,6 +820,7 @@ public:
 
     void clean()
     {
+        if (ccnvl_file) fclose(ccnvl_file);
         Mix_CloseAudio();
         TTF_Quit();
         IMG_Quit();

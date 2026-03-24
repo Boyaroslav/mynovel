@@ -29,6 +29,7 @@ bool IS_CCNVL = false; // если .bin то все как раньше. а ес
 
 FILE* ccnvl_file = nullptr; // будем хранить открытый указатель на файл чтоб если что оттуда чего читать (пока не храним)
 uint8_t* ccnvl_data  = nullptr;
+uint32_t scene_data_start = 0;
 
 // const char* DEFAULT_FONT = "FreeMono.ttf";
 const char *DEFAULT_FONT = "NotoSans_SemiCondensed-Regular.ttf";

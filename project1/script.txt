@@ -1,10 +1,14 @@
 SCRIPT main
 ROW 2
 BG "ksh1.jpg"
-TXT "hi"
-TXT "im nifger"
+TXT "file number one"
+RET "second"
+END
+
+SCRIPT second
+ROW 2
 BG "ksh2.jpg"
-TXT "я презираю нигеров"
-BG "ksh3.jpg"
+TXT "nigge"
+LDFILE "second.bin"
 RET "finale"
 END

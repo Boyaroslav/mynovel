@@ -13,7 +13,10 @@ int load_scenes_from_memory(const uint8_t, size_t, std::vector<Scene> &);
 
 int load_ccnvl(const char *filename, std::vector<Scene> &sc_out, int *out_count)
 {
-    FILE *f = fopen(filename, "rb");
+    if (ccnvl_file) fclose(ccnvl_file);
+    ccnvl_file = fopen(filename, "rb");
+
+    FILE *f = ccnvl_file;
     if (!f)
     {
         perror("Cannot open CCNVL file");
@@ -68,7 +71,7 @@ int load_ccnvl(const char *filename, std::vector<Scene> &sc_out, int *out_count)
         fread(&size, sizeof(uint32_t), 1, f);
         ccnvl_scenes[hash_n] = index_db_element{indx, size};
     }
-    long scene_data_start = ftell(f);       // текущее положение после индекса сцен
+    scene_data_start = ftell(f);       // текущее положение после индекса сцен
     fseek(f, 0, SEEK_END);                  // перейти в конец файла
     long file_end = ftell(f);               // конец файла
     fseek(f, scene_data_start, SEEK_SET);  // вернуться в начало блока данных
@@ -89,7 +92,7 @@ int load_ccnvl(const char *filename, std::vector<Scene> &sc_out, int *out_count)
 
     load_bin_from_ccnvl(f,  scene_data_start + ccnvl_scenes[start_scene_hash].offset, ccnvl_scenes[start_scene_hash].size, sc_out);
 
-    fclose(f);
+    //fclose(f);  // не будем пока закрывать
 
     return 1;
 }
@@ -361,4 +364,39 @@ int load_scene_from_ccnvl(FILE *f, uint32_t hash,
         return 0;
 
     return load_scenes_from_memory(buffer.data(), sc.size, sc_out);
+}
+
+
+
+int load_scene_by_name(const char *name, std::vector<Scene> &sc_out)
+{
+    if (!ccnvl_file)
+    {
+        printf("CCNVL not loaded\n");
+        return 0;
+    }
+
+    uint32_t hash = fnv1a_32(name);
+
+    auto it = ccnvl_scenes.find(hash);
+
+    if (it == ccnvl_scenes.end())
+    {
+        printf("Scene not found: %s\n", name);
+        return 0;
+    }
+
+    const index_db_element &sc = it->second;
+
+    uint32_t real_offset = scene_data_start + sc.offset;
+
+    printf("Loading scene '%s' at offset %u size %u\n",
+           name, real_offset, sc.size);
+
+    return load_bin_from_ccnvl(
+        ccnvl_file,
+        real_offset,
+        sc.size,
+        sc_out
+    );
 }
