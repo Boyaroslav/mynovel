@@ -17,6 +17,16 @@ FetchContent_Declare(SDL2_mixer
     URL https://github.com/libsdl-org/SDL_mixer/releases/download/release-2.8.0/SDL2_mixer-2.8.0.tar.gz
 )
 
+set(SDL2IMAGE_STATIC ON CACHE BOOL "" FORCE)
+set(SDL2IMAGE_SHARED OFF CACHE BOOL "" FORCE)
+set(SDL2TTF_STATIC ON CACHE BOOL "" FORCE)
+set(SDL2TTF_SHARED OFF CACHE BOOL "" FORCE)
+set(SDL_PIPEWIRE OFF CACHE BOOL "" FORCE)
+set(SDL2MIXER_STATIC ON CACHE BOOL "" FORCE)
+set(SDL2MIXER_SHARED OFF CACHE BOOL "" FORCE)
+set(SDL_STATIC ON CACHE BOOL "" FORCE)
+set(SDL_SHARED OFF CACHE BOOL "" FORCE)
+
 FetchContent_MakeAvailable(SDL2 SDL2_image SDL2_ttf SDL2_mixer)
 
 file(GLOB LUA_SOURCES lua/*.c)
@@ -30,16 +40,16 @@ add_executable(lcnovel main.cpp)
 add_executable(dumper novel_dumper.cpp)
 
 target_link_libraries(lcnovel
-    SDL2::SDL2
-    SDL2_image::SDL2_image
-    SDL2_ttf::SDL2_ttf
-    SDL2_mixer::SDL2_mixer
+    SDL2::SDL2-static
+    SDL2_image::SDL2_image-static
+    SDL2_ttf::SDL2_ttf-static
+    SDL2_mixer::SDL2_mixer-static
     lua_lib
 )
 
 target_link_libraries(dumper
-    SDL2::SDL2
-    SDL2_image::SDL2_image
-    SDL2_ttf::SDL2_ttf
-    SDL2_mixer::SDL2_mixer
+    SDL2::SDL2-static
+    SDL2_image::SDL2_image-static
+    SDL2_ttf::SDL2_ttf-static
+    SDL2_mixer::SDL2_mixer-static
 )
