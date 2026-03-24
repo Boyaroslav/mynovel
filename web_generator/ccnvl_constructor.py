@@ -16,8 +16,8 @@ def fnv1a_32(s: str) -> int:
 
 class CCNVLBuilder:
     
-    def __init__(self, path, outname, start_scene="scene.bin"):
-        self.path = Path(path)
+    def __init__(self, path="../project1", outname="../test2.ccnvl", start_scene="script.bin"):
+        self.path = Path(path).resolve()
         self.outname = outname
         self.dumper_path = "../dumper" # надо переделать чтобы он и в stdout печатал результат
 
@@ -50,68 +50,52 @@ class CCNVLBuilder:
             self.scenes.append(bin_file)
 
     def scan_resources(self):
-
-        for f in self.path.iterdir():
-
+        """Находим ресурсы и чанки во всех подпапках"""
+        for f in self.path.rglob("*"):
             if f.is_dir() and f.name.startswith("chunk"):
-
-                files = []
-                for sub in f.iterdir():
-                    if sub.is_file():
-                        files.append(sub)
-
+                files = [sub for sub in f.iterdir() if sub.is_file()]
                 self.chunks[f.name] = files
-
-            elif f.suffix in [".png", ".ogg", ".wav", ".lua"]:
-
+            elif f.is_file() and f.suffix.lower() in [".png", ".ogg", ".wav", ".lua", ".jpg"]:
                 self.resources.append(f)
-
-    def build_index(self): # builds index db
-
-        # обычные ресурсы
-
-        offset = 0
-
+        print("Resources found:")
         for r in self.resources:
+            print("-", r.relative_to(self.path).as_posix())
+        for chunk_name, files in self.chunks.items():
+            print(f"Chunk {chunk_name}:")
+            for f in files:
+                print("   ", f.relative_to(self.path).as_posix())
 
+
+    def build_index(self):
+        # Суммарный размер scene data — ресурсы идут ПОСЛЕ них в ccnvl_data
+        total_scene_data_size = sum(f.stat().st_size for f in self.scenes)
+
+        offset = total_scene_data_size  # <-- вот это и было ноль, а должно быть это
+        for r in self.resources:
+            rel_path = r.relative_to(self.path).as_posix()
             size = r.stat().st_size
-            h = fnv1a_32(r.name)
-
-            self.index_db.append(
-                (h, offset, size)
-            )
-
+            h = fnv1a_32(rel_path)
+            self.index_db.append((h, offset, size))
             offset += size
 
-        # chunk ресурсы
-
-        for i, (chunk_name, files) in enumerate(self.chunks.items()):
-
-            offset = 0
-
+        # чанки — тоже плоские офсеты, без битового пакинга
+        chunk_base = offset  # продолжаем после ресурсов
+        for chunk_name, files in self.chunks.items():
+            local_offset = 0
             for f in files:
-
-                key = f"{chunk_name}/{f.name}"
-                h = fnv1a_32(key)
+                key = f.relative_to(self.path).as_posix()
                 size = f.stat().st_size
-
-                index = (i << 24) | offset
-
-                self.index_db.append(
-                    (h, index, size)
-                )
-
-                offset += size
+                h = fnv1a_32(key)
+                self.index_db.append((h, chunk_base + local_offset, size))
+                local_offset += size
+            chunk_base += local_offset
 
     def write_ccnvl(self):
-
         with open(self.outname, "wb") as out:
 
             # ----------------
-            # MAGIC + VERSION
-            # + START_SCENE
+            # MAGIC + VERSION + START_SCENE
             # ----------------
-
             out.write(b"CCNVL")
             out.write(struct.pack("<B", VERSION))
             out.write(struct.pack("<I", fnv1a_32(self.start_scene)))
@@ -119,11 +103,8 @@ class CCNVLBuilder:
             # ----------------
             # INDEX DB
             # ----------------
-
             out.write(struct.pack("<I", len(self.index_db)))
-
             for hsh, indx, size in self.index_db:
-
                 out.write(struct.pack("<I", hsh))
                 out.write(struct.pack("<I", indx))
                 out.write(struct.pack("<I", size))
@@ -131,34 +112,22 @@ class CCNVLBuilder:
             # ----------------
             # SCENE INDEX BUILD
             # ----------------
-
             scene_index = []
             scene_data = []
-
             offset = 0
-
             for scene_path in self.scenes:
-
-                with open(scene_path, "rb") as f:
-                    data = f.read()
-
+                data = scene_path.read_bytes()
                 size = len(data)
-
-                scene_hash = fnv1a_32(scene_path.stem)
-
+                scene_hash = fnv1a_32(scene_path.resolve().relative_to(self.path).as_posix())
                 scene_index.append((scene_hash, offset, size))
                 scene_data.append(data)
-
                 offset += size
 
             # ----------------
             # SCENE INDEX WRITE
             # ----------------
-
             out.write(struct.pack("<I", len(scene_index)))
-
             for hsh, off, size in scene_index:
-
                 out.write(struct.pack("<I", hsh))
                 out.write(struct.pack("<I", off))
                 out.write(struct.pack("<I", size))
@@ -166,34 +135,37 @@ class CCNVLBuilder:
             # ----------------
             # SCENE DATA
             # ----------------
-
             for data in scene_data:
                 out.write(data)
 
             # ----------------
+            # RESOURCE DB (теперь после SCENE DATA)
+            # ----------------
+            for r in self.resources:
+                out.write(r.read_bytes())
+            for files in self.chunks.values():
+                for f in files:
+                    out.write(f.read_bytes())
+
+            # ----------------
             # CHUNK DB
             # ----------------
-
             out.write(struct.pack("<I", len(self.chunks)))
-
             for chunk_name in self.chunks:
-
                 name = chunk_name.encode("utf-8")
-
                 out.write(struct.pack("<I", len(name)))
                 out.write(name)
 
             # ----------------
             # END
             # ----------------
-
             out.write(b"END")
 
 
 
 if __name__ == "__main__":
-    b = CCNVLBuilder(input("path: "), input("outname: "), input("start scene: "))
-    
+    #b = CCNVLBuilder(input("path: "), input("outname: "), input("start scene: "))
+    b = CCNVLBuilder()
     b.compile_scripts()
     b.scan_resources()
     b.build_index()

@@ -4,6 +4,7 @@
 *.png
 a.out
 tr.txt
+project1
 *.zip
 *.json
 .DS_Store

@@ -39,12 +39,13 @@ int load_ccnvl(const char *filename, std::vector<Scene> &sc_out, int *out_count)
 
     fread(&start_scene_hash, sizeof(uint32_t), 1, f);
 
-    uint8_t index_db_size;
+    uint32_t index_db_size;
     fread(&index_db_size, sizeof(uint32_t), 1, f);
     printf("index db size - %d\n", index_db_size);
     uint32_t hash_n;
     uint32_t indx;
     uint32_t size;
+    // ресурсы 
 
     for (int i = 0; i < index_db_size; i++)
     {
@@ -56,6 +57,7 @@ int load_ccnvl(const char *filename, std::vector<Scene> &sc_out, int *out_count)
 
     sc_out.clear();
 
+    //  сцены (.bin s)
 
     uint32_t scene_size;
     fread(&scene_size, sizeof(uint32_t), 1, f);
@@ -66,8 +68,26 @@ int load_ccnvl(const char *filename, std::vector<Scene> &sc_out, int *out_count)
         fread(&size, sizeof(uint32_t), 1, f);
         ccnvl_scenes[hash_n] = index_db_element{indx, size};
     }
+    long scene_data_start = ftell(f);       // текущее положение после индекса сцен
+    fseek(f, 0, SEEK_END);                  // перейти в конец файла
+    long file_end = ftell(f);               // конец файла
+    fseek(f, scene_data_start, SEEK_SET);  // вернуться в начало блока данных
+    long data_size = file_end - scene_data_start;
+    if (ccnvl_data) delete[] ccnvl_data; // на всякий случай
+    ccnvl_data = new uint8_t[data_size];
 
-    load_bin_from_ccnvl(f, ccnvl_scenes[start_scene_hash].offset, ccnvl_scenes[start_scene_hash].size, sc_out);
+    // читаем весь блок данных в память
+    fseek(f, scene_data_start, SEEK_SET);
+    if (fread(ccnvl_data, 1, data_size, f) != data_size)
+    {
+        printf("Failed to read CCNVL data\n");
+        delete[] ccnvl_data;
+        ccnvl_data = nullptr;
+        fclose(f);
+        return 0;
+    }
+
+    load_bin_from_ccnvl(f,  scene_data_start + ccnvl_scenes[start_scene_hash].offset, ccnvl_scenes[start_scene_hash].size, sc_out);
 
     fclose(f);
 
@@ -96,12 +116,13 @@ int load_file(const char *filename, std::vector<Scene> &sc_out, int *out_count)
         return 0;
     }
 
-    int scene_count;
-    if (fread(&scene_count, sizeof(int), 1, f) != 1)
+    uint32_t scene_count;
+    if (fread(&scene_count, sizeof(uint32_t), 1, f) != 1)
     {
         fclose(f);
         return 0;
     }
+    std::cout<<"SCENE COUNT: "<<scene_count<<" \n";
 
     sc_out.resize(scene_count);
 

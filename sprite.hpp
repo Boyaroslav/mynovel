@@ -26,8 +26,32 @@ public:
     ~Sprite() {
         for (auto t : textures) SDL_DestroyTexture(t.texture);
     }
+    SDL_Surface* load_from_ccnvl(const char* path) {
+        uint32_t hash = fnv1a_32(path);
+
+        auto it = ccnvl_resources.find(hash);
+        if (it == ccnvl_resources.end()) {
+            log("CCNVL resource not found: " + std::string(path));
+            return nullptr;
+        }
+
+        auto& res = it->second;
+        SDL_RWops* rw = SDL_RWFromMem(ccnvl_data + res.offset, res.size);
+        if (!rw) return nullptr;
+
+        SDL_Surface* surf = IMG_Load_RW(rw, 1);
+        if (!surf) {
+            log("Failed to load surface from CCNVL: " + std::string(path));
+            return nullptr;
+        }
+
+        return surf;
+    } 
     void load_texture(SDL_Renderer* rend, const char* path, int index=-1) {
-        SDL_Surface* surf = IMG_Load(path);
+        SDL_Surface* surf;
+        
+        if (IS_CCNVL){surf = load_from_ccnvl(path);}
+        else  surf = IMG_Load(path);
         if (!surf) {
             log(std::string("failed to load") + path);
             SDL_FreeSurface(surf);

@@ -1,7 +1,10 @@
 SCRIPT main
 ROW 2
-BG "kashira.jpg"
+BG "ksh1.jpg"
 TXT "hi"
 TXT "im nifger"
+BG "ksh2.jpg"
+TXT "я презираю нигеров"
+BG "ksh3.jpg"
 RET "finale"
 END

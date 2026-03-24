@@ -27,6 +27,9 @@ const int TEXT_BOX_VERTICAL_PADDING = 20;
 
 bool IS_CCNVL = false; // если .bin то все как раньше. а если .ccnvl то будем по другому брать фотки, другие файлы там и тд
 
+FILE* ccnvl_file = nullptr; // будем хранить открытый указатель на файл чтоб если что оттуда чего читать (пока не храним)
+uint8_t* ccnvl_data  = nullptr;
+
 // const char* DEFAULT_FONT = "FreeMono.ttf";
 const char *DEFAULT_FONT = "NotoSans_SemiCondensed-Regular.ttf";
 
@@ -64,6 +67,17 @@ uint64_t fnv1a(const std::string &s)
         hash *= 1099511628211ULL;
     }
 
+    return hash;
+}
+
+uint32_t fnv1a_32(const std::string &s)
+{
+    uint32_t hash = 2166136261u;
+    for (char c : s)
+    {
+        hash ^= (uint8_t)c;
+        hash *= 16777619u;
+    }
     return hash;
 }
 
