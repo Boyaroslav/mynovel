@@ -41,15 +41,15 @@ add_executable(dumper novel_dumper.cpp)
 
 target_link_libraries(lcnovel
     SDL2::SDL2-static
-    SDL2_image::SDL2_image-static
-    SDL2_ttf::SDL2_ttf-static
-    SDL2_mixer::SDL2_mixer-static
+    SDL2_image::SDL2_image
+    SDL2_ttf::SDL2_ttf
+    SDL2_mixer::SDL2_mixer
     lua_lib
 )
 
 target_link_libraries(dumper
     SDL2::SDL2-static
-    SDL2_image::SDL2_image-static
-    SDL2_ttf::SDL2_ttf-static
-    SDL2_mixer::SDL2_mixer-static
+    SDL2_image::SDL2_image
+    SDL2_ttf::SDL2_ttf
+    SDL2_mixer::SDL2_mixer
 )
