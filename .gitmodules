@@ -1,3 +1,15 @@
 [submodule "lua"]
 	path = lua
 	url = https://github.com/lua/lua.git
+[submodule "SDL2"]
+	path = SDL2
+	url = https://github.com/libsdl-org/SDL.git
+[submodule "SDL2_image"]
+	path = SDL2_image
+	url = https://github.com/libsdl-org/SDL_image.git
+[submodule "SDL2_ttf"]
+	path = SDL2_ttf
+	url = https://github.com/libsdl-org/SDL_ttf.git
+[submodule "SDL2_mixer"]
+	path = SDL2_mixer
+	url = https://github.com/libsdl-org/SDL_mixer.git
