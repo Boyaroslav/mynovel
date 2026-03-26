@@ -8,6 +8,7 @@ project1
 *.zip
 *.json
 *.ccnvl
+_deps
 .DS_Store
 lcnovel
 dumper
