@@ -9,6 +9,7 @@ project1
 *.json
 *.ccnvl
 _deps
+_deps/*
 .DS_Store
 lcnovel
 dumper
