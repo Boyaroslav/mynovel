@@ -49,6 +49,9 @@ public:
     } 
     void load_texture(SDL_Renderer* rend, const char* path, int index=-1) {
         SDL_Surface* surf;
+        if (future_index != -1){
+            current_index = future_index;
+        }
         
         if (IS_CCNVL){surf = load_from_ccnvl(path);}
         else  surf = IMG_Load(path);

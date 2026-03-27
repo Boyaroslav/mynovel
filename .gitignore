@@ -10,6 +10,7 @@ project1
 *.ccnvl
 _deps
 _deps/*
+include/*
 .DS_Store
 lcnovel
 dumper
