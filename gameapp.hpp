@@ -473,18 +473,24 @@ public:
         { // LOAD with x y w h
             last_id++;
             earg *a = &apool[current_event->args_offset];
+            float ld_speed = get_value("LD_SPEED");
             const char *file = get_from_spool(a->value);
             int x = apool[current_event->args_offset + 1].value;
             int y = apool[current_event->args_offset + 2].value;
             int w = apool[current_event->args_offset + 3].value;
             int h = apool[current_event->args_offset + 4].value;
-            // todo - сделать файл sprite.pak
+            // todo - сделать файл sprite.pak - done
             // где будут храниться все файлы + их имена
             // после этого сделать в спрайте чтобы он искал текстуру там по имени файла
             SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
             SDL_SetRenderTarget(renderer, nullptr);
-            log("LD: " + std::string(file));
+            log("LDXYWH: " + std::string(file));
+            if (ld_speed == 0){
             sprites.emplace_back(renderer, file, x, y, w, h);
+            }
+            else{
+            sprites.emplace_back(renderer, file, x, y, w, h, ld_speed);
+            }
             log(sprites[sprites.size() - 1].get_rect());
         }
         break;
@@ -547,6 +553,12 @@ public:
             }
 
             std::cout << "[OPERATION] " << var << " op=" << (int)op << "\n";
+        }
+        break;
+        case 16: // TBCAP - change footer
+        {
+            std::string t = get_from_spool(apool[current_event->args_offset].value);
+            textbox.set_footer(t);
         }
         break;
         case 17: // WAIT

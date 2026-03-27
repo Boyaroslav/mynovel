@@ -1,14 +1,17 @@
 SCRIPT main
 ROW 2
-BG "ksh1.jpg"
-TXT "file number one"
-RET "second"
-END
-
-SCRIPT second
+BG "vetclinic.jpg"
+LDXYWH cock.png 30 30 400 600
 ROW 2
-BG "ksh2.jpg"
-TXT "nigge"
-LDFILE "second.bin"
-RET "finale"
+TBCAP "жалкий петух"
+TXT "нееет я не хочу лечиться!"
+TXT "я буду послушным обещаю!"
+TXT "не надо меня 'костировать', я больше не буду обижать кука!"
+TXT "я мечтаю вырастить яички вместе с тобой"
+TXT "я люблю тебя дорогая..."
+
+CHSPR 0 "cock_angry.png"
+ROW 2
+CLTB
+LDFILE "script2.bin"
 END

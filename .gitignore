@@ -18,6 +18,8 @@ CMakeCache.txt
 cmake_install.cmake
 *Makefile*
 a.out
+cockshare
+cockshare/*
 CMakeCache.txt
 CMakeFiles/
 Makefile

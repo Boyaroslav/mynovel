@@ -14,6 +14,7 @@ struct message{
 class TextBox{
     protected:
         int step = 1;
+        std::string footer;
         SDL_Rect border = {100, 400, 500, 600};
         SDL_Color box_color = to_sdlc(DEFAULT_BOX_COLOR);
         std::vector<message>messages; // [text angry slow] \n [text normal quick and so on]
@@ -24,6 +25,7 @@ class TextBox{
         void cl();
         void cllast();
         void draw(SDL_Renderer*);
+        void set_footer(std::string);
         void update(float);
         void done_messages();
         void update_position(int, int);

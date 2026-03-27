@@ -22,6 +22,8 @@ private:
 
     int texture_change_percent = 100;
 
+    bool in_fade = true; // есть ли исчезающий спрайт при смене главного спрайта
+
 public:
     ~Sprite() {
         for (auto t : textures) SDL_DestroyTexture(t.texture);
@@ -87,6 +89,19 @@ public:
         //set_rect(50, 50, texture_size_w, texture_size_h);
         
     }
+    Sprite(SDL_Renderer* rend, const char* path, int x, int y, int w, int h, float ld_speed){
+    
+        load_texture(rend, path);
+        this->set_texture_change_speed(ld_speed);
+        if (this->textures.size() < 2)in_fade = false;
+        set_rect(x, y, w, h);
+
+        future_index = get_last();
+        transition_alpha = 0.0f;
+
+        //set_rect(50, 50, texture_size_w, texture_size_h);
+        
+    }
 
     void set_current_texture(int index) {
         if (index < 0 || index >= textures.size()) return;
@@ -111,6 +126,7 @@ public:
             current_index = future_index;
             future_index = -1;
             transition_alpha = 0.0f;
+            in_fade = 1;
         }
     }
 
@@ -121,21 +137,23 @@ public:
     void draw(SDL_Renderer* rend) {
         SDL_SetRenderDrawBlendMode(rend, SDL_BLENDMODE_BLEND);
         SDL_Rect r_ = placed_rect(rect);
-        if (future_index == -1) {
+        if ((future_index == -1) && in_fade) {
             SDL_SetTextureAlphaMod(textures[current_index].texture, 255);
             SDL_RenderCopyEx(rend, textures[current_index].texture, nullptr, &r_, angle, nullptr, SDL_FLIP_NONE);
         } else {
-            SDL_SetTextureAlphaMod(textures[current_index].texture, 255);
+            if(in_fade){SDL_SetTextureAlphaMod(textures[current_index].texture, 255);
+                SDL_RenderCopyEx(rend, textures[current_index].texture, nullptr, &r_, angle, nullptr, SDL_FLIP_NONE);
+            }
             SDL_SetTextureAlphaMod(textures[future_index].texture, Uint8(transition_alpha * 255));
             //set_rect(textures[current_index].rect);
 
-            SDL_RenderCopyEx(rend, textures[current_index].texture, nullptr, &r_, angle, nullptr, SDL_FLIP_NONE);
+        
             //set_rect(textures[future_index].rect);
             SDL_RenderCopyEx(rend, textures[future_index].texture, nullptr, &r_, angle, nullptr, SDL_FLIP_NONE);
 
             SDL_SetTextureAlphaMod(textures[future_index].texture, 255);
         }
-        SDL_SetTextureAlphaMod(textures[current_index].texture, 255);
+        if(in_fade)SDL_SetTextureAlphaMod(textures[current_index].texture, 255);
     }
 
     void set_rect(int x_, int y_, int w=-1, int h=-1) {
@@ -179,6 +197,7 @@ Sprite(Sprite&& other) noexcept {
     rect = other.rect;
     x = other.x;
     y = other.y;
+    in_fade = other.in_fade;
     angle = other.angle;
     current_index = other.current_index;
     future_index = other.future_index;
@@ -195,6 +214,7 @@ Sprite& operator=(Sprite&& other) noexcept {
     x = other.x;
     y = other.y;
     angle = other.angle;
+    in_fade = other.in_fade;
     current_index = other.current_index;
     future_index = other.future_index;
     alpha = other.alpha;

@@ -62,6 +62,9 @@ for (auto& line : lines) {
 
 }
 
+void TextBox::set_footer(std::string t){
+    footer = t;
+}
 
 
 void TextBox::done_messages(){
@@ -89,7 +92,7 @@ void TextBox::update(float delta_time) {
 
 void TextBox::addMessage(std::string text){
     if(messages.size()) done_messages();
-    messages.push_back({interpolate(text), 0.1, std::chrono::steady_clock::now(), 0});
+    messages.push_back({interpolate(text), LETTER_SPEED, std::chrono::steady_clock::now(), 0});
 }
 
 void TextBox::cl(){

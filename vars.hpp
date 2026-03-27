@@ -82,8 +82,8 @@ Var get_value(const std::string &t)
 
 void vars_init()
 {
-    set_value("VAR_BG_CHANGE_SPEED", 5.0);
-    set_value("LD_SPEED", 2.0); // как быстро будет выплывать спрайт
+    set_value("VAR_BG_CHANGE_SPEED", 2.0);
+    set_value("LD_SPEED", 0.4); // как быстро будет выплывать спрайт
     set_value("WINDOW_TITLE", std::string("my novel"));
 }
 

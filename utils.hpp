@@ -24,6 +24,8 @@ const int DEFAULT_FONT_SIZE = 28;
 const int TEXT_BOX_HORIZONTAL_PADDING = 100;
 const int TEXT_BOX_VERTICAL_PADDING = 20;
 
+float LETTER_SPEED = 0.07;
+
 
 bool IS_CCNVL = false; // если .bin то все как раньше. а если .ccnvl то будем по другому брать фотки, другие файлы там и тд
 
