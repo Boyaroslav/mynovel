@@ -1,17 +1,17 @@
 /*
- * This file is part of CCN (mynovel).
+ * This file is part of CnCn (mynovel).
  * Copyright (C) 2026 Iaroslav Bobylev
- * CCN (mynovel) is free software: you can redistribute it and/or modify
+ * CnCn (mynovel) is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, version 3 of the License.
  *
- * CCN (mynovel) is distributed in the hope that it will be useful,
+ * CnCn (mynovel) is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
  * See the GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with CCN (mynovel). If not, see <https://www.gnu.org/licenses/>.
+ * along with CnCn (mynovel). If not, see <https://www.gnu.org/licenses/>.
  */
 
 
@@ -51,7 +51,9 @@ uint8_t* ccnvl_data  = nullptr;
 uint32_t scene_data_start = 0;
 
 // const char* DEFAULT_FONT = "FreeMono.ttf";
-const char *DEFAULT_FONT = "NotoSans_SemiCondensed-Regular.ttf";
+const char *DEFAULT_FONT = "./NotoSans_SemiCondensed-Regular.ttf";
+
+char FONT[256];
 
 struct index_db_element{
     uint32_t offset;

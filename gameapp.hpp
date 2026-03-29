@@ -1,20 +1,18 @@
 /*
- * This file is part of CCN (mynovel).
+ * This file is part of CnCn (mynovel).
  * Copyright (C) 2026 Iaroslav Bobylev
- * CCN (mynovel) is free software: you can redistribute it and/or modify
+ * CnCn (mynovel) is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, version 3 of the License.
  *
- * CCN (mynovel) is distributed in the hope that it will be useful,
+ * CnCn (mynovel) is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
  * See the GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with CCN (mynovel). If not, see <https://www.gnu.org/licenses/>.
+ * along with CnCn (mynovel). If not, see <https://www.gnu.org/licenses/>.
  */
-
-
 
 #pragma once
 
@@ -23,6 +21,7 @@
 #include "loader.hpp"
 #include "textbox.cpp"
 #include "sprite.hpp"
+#include "gamemixer.hpp"
 #include <setjmp.h>
 
 #define LUA_COMMAND_ADD_MESSAGE_TO_TEXTBOX "txt"
@@ -48,6 +47,7 @@ private:
     jmp_buf row_resume_jmp;
     jmp_buf row_wait_jmp;
     bool if_result = 1;
+    Audio audio;
     lua_State *L = nullptr;
     std::vector<LuaCoroutine> lua_active_coroutines;
 
@@ -137,6 +137,7 @@ public:
 
         main_font = Font();
         main_font.load();
+
         vars_init();
         L = luaL_newstate();
         luaL_openlibs(L);
@@ -183,9 +184,9 @@ public:
     {
         scenes.clear();
         if (!IS_CCNVL)
-        load_file(name, scenes, &scenes_number);
-        else 
-        load_scene_by_name(name, scenes);
+            load_file(name, scenes, &scenes_number);
+        else
+            load_scene_by_name(name, scenes);
     }
     void sync_vars_to_lua(lua_State *state)
     {
@@ -316,7 +317,7 @@ public:
 
     void handleEvent(bool isnext_needed = true)
     {
-        std::cout<<"HE "<<(int)(current_event->id)<<" \n";
+        std::cout << "HE " << (int)(current_event->id) << " \n";
         if (!if_result &&
             current_event->id != 21 &&
             current_event->id != 22)
@@ -503,11 +504,13 @@ public:
             SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
             SDL_SetRenderTarget(renderer, nullptr);
             log("LDXYWH: " + std::string(file));
-            if (ld_speed == 0){
-            sprites.emplace_back(renderer, file, x, y, w, h);
+            if (ld_speed == 0)
+            {
+                sprites.emplace_back(renderer, file, x, y, w, h);
             }
-            else{
-            sprites.emplace_back(renderer, file, x, y, w, h, ld_speed);
+            else
+            {
+                sprites.emplace_back(renderer, file, x, y, w, h, ld_speed);
             }
             log(sprites[sprites.size() - 1].get_rect());
         }
@@ -705,6 +708,32 @@ public:
             NEED_MORE_EVENTS = 1;
         }
         break;
+        case 23: // BPM
+        {
+            if (apool[current_event->args_offset].type == ARG_INT)
+            {
+                audio.play_music("0");
+            }
+            else
+            {
+                const char *file = get_from_spool(apool[current_event->args_offset].value);
+                audio.play_music(file);
+            }
+        }
+        break;
+        case 24: // SOUND
+        {
+            const char *file = get_from_spool(apool[current_event->args_offset].value);
+            audio.play_audio(file);
+
+        }
+        break;
+        case 25: // BOMFADEIN
+        {
+            int t = apool[current_event->args_offset].value;
+            audio.fade_in_music(t);
+        }
+        break;
         case 26: // LUA_IMPORT
         {
             const char *file = get_from_spool(apool[current_event->args_offset].value);
@@ -722,12 +751,17 @@ public:
         {
             const char *file = get_from_spool(apool[current_event->args_offset].value);
             log(std::string("LD_FILE ") + file);
-            this->load_(const_cast<char*>(file));
+            this->load_(const_cast<char *>(file));
             this->change_scene("main");
 
             NEED_MORE_EVENTS = 1;
         }
         break;
+        case 33: // BOMFADEOUT
+        {
+            int t = apool[current_event->args_offset].value;
+            audio.fade_out_music(t);
+        }
         }
         if (isnext_needed)
             nextEvent();
@@ -850,7 +884,8 @@ public:
 
     void clean()
     {
-        if (ccnvl_file) fclose(ccnvl_file);
+        if (ccnvl_file)
+            fclose(ccnvl_file);
         Mix_CloseAudio();
         TTF_Quit();
         IMG_Quit();

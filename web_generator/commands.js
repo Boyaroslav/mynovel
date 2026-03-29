@@ -371,9 +371,7 @@ Blockly.Blocks['JMP'] = {
 Blockly.Blocks['TBCAP'] = {
   init: function () {
     this.appendValueInput("NAME")
-      .appendField("TBCAP name");
-    this.appendValueInput("TEXT")
-      .appendField("text");
+      .appendField("TBCAP");
     this.setPreviousStatement(true);
     this.setNextStatement(true);
     this.setColour(COL_TEXT);

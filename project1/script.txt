@@ -2,10 +2,16 @@ SCRIPT main
 ROW 2
 BG "vetclinic.jpg"
 LDXYWH cock.png 30 30 400 600
-ROW 2
+ROW 3
+
 TBCAP "жалкий петух"
+SOUND "v1.ogg"
 TXT "нееет я не хочу лечиться!"
+ROW 2
+SOUND "v2.ogg"
 TXT "я буду послушным обещаю!"
+ROW 4
+SOUND "v3.ogg"
 TXT "не надо меня 'костировать', я больше не буду обижать кука!"
 TXT "я мечтаю вырастить яички вместе с тобой"
 TXT "я люблю тебя дорогая..."

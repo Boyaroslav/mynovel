@@ -33,7 +33,7 @@ def fnv1a_32(s: str) -> int:
 
 class CCNVLBuilder:
     
-    def __init__(self, path="../cockshare/project1/", outname="../test2.ccnvl", start_scene="script.bin"):
+    def __init__(self, path="../project1/", outname="../test2.ccnvl", start_scene="script.bin"):
         self.path = Path(path).resolve()
         self.outname = outname
         self.dumper_path = "../dumper" # надо переделать чтобы он и в stdout печатал результат
@@ -72,7 +72,7 @@ class CCNVLBuilder:
             if f.is_dir() and f.name.startswith("chunk"):
                 files = [sub for sub in f.iterdir() if sub.is_file()]
                 self.chunks[f.name] = files
-            elif f.is_file() and f.suffix.lower() in [".png", ".ogg", ".wav", ".lua", ".jpg"]:
+            elif f.is_file() and f.suffix.lower() in [".png", ".ogg", ".wav", ".lua", ".jpg", ".opus", ".mp3"]:
                 self.resources.append(f)
         print("Resources found:")
         for r in self.resources:

@@ -324,12 +324,10 @@ document.addEventListener('keydown', (e) => {
       };
       jsGenerator.forBlock['TBCAP'] = function (block){
         let name = jsGenerator.valueToCode(block, "NAME", jsGenerator.ORDER_ATOMIC) || `""`;
-        let text = jsGenerator.valueToCode(block, "TEXT", jsGenerator.ORDER_ATOMIC) || `""`;
 
         name = cleanValue(name);
-        text = cleanValue(text);
 
-        return `TBCAP "${name}" "${text}"\n`;
+        return `TBCAP "${name}"\n`;
       };
       jsGenerator.forBlock['LUA_IMPORT'] = function (block){
         let lib = jsGenerator.valueToCode(block, "LIB", jsGenerator.ORDER_ATOMIC) || `""`;
