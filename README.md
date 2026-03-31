@@ -7,4 +7,19 @@
 <p>cmake .</p>
 <p>make</p>
 <p>to run - ./lcnovel or CCNVL_FILE=file.ccnvl ./lcnovel</p>
-<p>to create a new ccnvl file see web_generator/</p>
+<p>to create a new ccnvl file see web_generator/ </p>
+
+<p>
+TODO
+
+
+interface
+global menu with ability of creating special stylized menu for novels
+textbox header drawing
+
+textbox support of button words in the text
+option commands
+
+web generator supports not full list of commands for now
+
+</p>
