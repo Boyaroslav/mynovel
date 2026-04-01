@@ -14,7 +14,6 @@
  * along with CnCn (mynovel). If not, see <https://www.gnu.org/licenses/>.
  */
 
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -23,6 +22,11 @@
 #include "pool.hpp"
 #include "scene.hpp"
 #include "event_types.hpp"
+
+#ifdef _WIN32
+#undef main 
+#endif
+
 
 bool DEBUG = 1;
 

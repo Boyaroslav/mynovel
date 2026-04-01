@@ -13,8 +13,11 @@ if(SYSTEM_SDL)
     set(SDL_LIBS SDL2::SDL2 SDL2_image::SDL2_image SDL2_ttf::SDL2_ttf SDL2_mixer::SDL2_mixer)
 else()
     include(FetchContent)
+    FetchContent_Declare(freetype
+    URL https://download.savannah.gnu.org/releases/freetype/freetype-2.13.2.tar.gz
+    )
     FetchContent_Declare(SDL2
-        URL https://github.com/libsdl-org/SDL/releases/download/release-2.30.0/SDL2-2.30.0.tar.gz
+        URL https://github.com/libsdl-org/SDL/releases/download/release-2.32.4/SDL2-2.32.4.tar.gz
     )
     FetchContent_Declare(SDL2_image
         URL https://github.com/libsdl-org/SDL_image/releases/download/release-2.8.2/SDL2_image-2.8.2.tar.gz
@@ -35,7 +38,41 @@ else()
     set(SDL2MIXER_STATIC ON CACHE BOOL "" FORCE)
     set(SDL2MIXER_SHARED OFF CACHE BOOL "" FORCE)
     set(SDL2MIXER_OPUS OFF CACHE BOOL "" FORCE)
+    set(SDL2TTF_FREETYPE ON CACHE BOOL "" FORCE)
+    set(SDL2TTF_HARFBUZZ OFF CACHE BOOL "" FORCE)
+    set(FT_DISABLE_ZLIB ON CACHE BOOL "" FORCE)
+    set(FT_DISABLE_BZIP2 ON CACHE BOOL "" FORCE)
+    set(FT_DISABLE_PNG ON CACHE BOOL "" FORCE)
+    set(FT_DISABLE_HARFBUZZ ON CACHE BOOL "" FORCE)
+    set(FT_DISABLE_BROTLI ON CACHE BOOL "" FORCE)
+    set(SDL2MIXER_MOD OFF CACHE BOOL "" FORCE)
+    set(SDL2MIXER_MOD_XMP OFF CACHE BOOL "" FORCE)
     set(BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)
+    set(SDL2MIXER_FLAC ON CACHE BOOL "" FORCE)
+    set(SDL2MIXER_MOD OFF CACHE BOOL "" FORCE)
+    set(SDL2MIXER_MOD_XMP OFF CACHE BOOL "" FORCE)
+    set(SDL2MIXER_MP3 ON CACHE BOOL "" FORCE)
+    set(SDL2MIXER_OGG ON CACHE BOOL "" FORCE)
+    set(SDL2MIXER_OPUS OFF CACHE BOOL "" FORCE) # господи хоть бы денис опять хуеты на опусе не зарендерил
+    set(SDL2MIXER_WAVPACK OFF CACHE BOOL "" FORCE)
+    set(SDL2MIXER_FLAC_LIBFLAC OFF CACHE BOOL "" FORCE)
+    set(SDL2MIXER_FLAC_DRFLAC ON CACHE BOOL "" FORCE)
+    set(SDL2MIXER_MP3_MPG123 OFF CACHE BOOL "" FORCE)
+    set(SDL2MIXER_MP3_DRMP3 ON CACHE BOOL "" FORCE)
+    set(SDL2MIXER_OGG_TREMOR OFF CACHE BOOL "" FORCE)
+    set(SDL2MIXER_VORBIS_STB ON CACHE BOOL "" FORCE)
+    set(SDL2MIXER_OPUS_SHARED OFF CACHE BOOL "" FORCE)
+    FetchContent_MakeAvailable(freetype)
+
+    set(FREETYPE_LIBRARY freetype)
+    set(FREETYPE_INCLUDE_DIRS
+        ${freetype_SOURCE_DIR}/include
+        ${freetype_BINARY_DIR}/include
+    )
+
+    if(NOT TARGET Freetype::Freetype)
+        add_library(Freetype::Freetype ALIAS freetype)
+    endif()
     FetchContent_MakeAvailable(SDL2 SDL2_image SDL2_ttf SDL2_mixer)
     set(SDL_LIBS SDL2::SDL2-static SDL2::image SDL2::ttf SDL2::mixer)
 endif()
@@ -49,6 +86,10 @@ target_include_directories(lua_lib PUBLIC lua/)
 
 add_executable(lcnovel main.cpp)
 add_executable(dumper novel_dumper.cpp)
+if(WIN32)
+    target_link_options(lcnovel PRIVATE -mconsole)
+    target_link_options(dumper PRIVATE -mconsole)
+endif()
 
 target_link_libraries(lcnovel ${SDL_LIBS} lua_lib)
 target_link_libraries(dumper ${SDL_LIBS})

@@ -18,7 +18,7 @@
 #include "event_types.hpp"
 #include <variant>
 
-u_int32_t last_id = -1;
+uint32_t last_id = -1;
 
 struct Var
 {

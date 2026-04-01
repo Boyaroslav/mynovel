@@ -12,12 +12,16 @@ _deps
 _deps/*
 include/*
 .DS_Store
+build/
+build_windows/
+build_macos/
 lcnovel
 dumper
 CMakeCache.txt
 cmake_install.cmake
 *Makefile*
 a.out
+.DS_Store
 cockshare
 cockshare/*
 CMakeCache.txt
