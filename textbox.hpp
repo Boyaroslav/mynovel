@@ -37,6 +37,7 @@ class TextBox{
         std::vector<message>messages; // [text angry slow] \n [text normal quick and so on]
         std::chrono::steady_clock::time_point last_update;
     public:
+        TextBox(){IS_INPUT=0; input_header_size=0;}
 
         void addMessage(std::string);
         void cl();
@@ -45,5 +46,9 @@ class TextBox{
         void set_footer(std::string);
         void update(float);
         void done_messages();
+        std::string* get_last();
+        void refresh_last();
         void update_position(int, int);
+        bool IS_INPUT;
+        int input_header_size;
 };

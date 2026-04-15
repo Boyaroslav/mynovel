@@ -717,14 +717,14 @@ public:
             else
             {
                 const char *file = get_from_spool(apool[current_event->args_offset].value);
-                audio.play_music(file);
+                audio.play_music(interpolate(std::string(file)).c_str());
             }
         }
         break;
         case 24: // SOUND
         {
             const char *file = get_from_spool(apool[current_event->args_offset].value);
-            audio.play_audio(file);
+            audio.play_audio(interpolate(std::string(file)).c_str());
 
         }
         break;
@@ -737,6 +737,19 @@ public:
         case 26: // LUA_IMPORT
         {
             const char *file = get_from_spool(apool[current_event->args_offset].value);
+            if (IS_CCNVL){
+                int hash = fnv1a_32(file);
+                auto it = ccnvl_resources.find(hash);
+                if (it != ccnvl_resources.end()) {
+                    auto &res = it->second;
+                    if (luaL_loadbuffer(L, (const char*)(ccnvl_data + res.offset), res.size, file) == LUA_OK) {
+                    if (lua_pcall(L, 0, LUA_MULTRET, 0) != LUA_OK){
+                        lua_pop(L, 1);
+                    }
+                }
+            }
+            }
+            else{
 
             std::cout << "[LUA_IMPORT] " << file << "\n";
 
@@ -744,6 +757,7 @@ public:
             {
                 printf("[LUA_IMPORT ERROR] %s\n", lua_tostring(L, -1));
                 lua_pop(L, 1);
+            }
             }
         }
         break;
@@ -757,11 +771,38 @@ public:
             NEED_MORE_EVENTS = 1;
         }
         break;
-        case 33: // BOMFADEOUT
+        case 28: // BPMVOL
+        {
+            audio.set_music_volume(apool[current_event->args_offset].value);
+        }
+        break;
+        case 29: // SOUNDVOL
+        {
+            const char *file = get_from_spool(apool[current_event->args_offset].value);
+            audio.play_audio(interpolate(std::string(file)).c_str(), 0, apool[current_event->args_offset + 1].value);
+        }
+        break;
+        case 33: // BPMFADEOUT
         {
             int t = apool[current_event->args_offset].value;
             audio.fade_out_music(t);
         }
+        break;
+        case 34: // TALK
+        {
+            const char *file = get_from_spool(apool[current_event->args_offset].value);
+            audio.play_audio(interpolate(std::string(file)).c_str(), 1);
+
+        }
+        break;
+        case 35: // INPUT
+        {
+            SDL_StartTextInput();
+            textbox.IS_INPUT=1;
+            textbox.addMessage(interpolate(get_from_spool(apool[current_event->args_offset].value)));
+            textbox.input_header_size = textbox.get_last()->size();
+        }
+        break;
         }
         if (isnext_needed)
             nextEvent();
@@ -777,6 +818,13 @@ public:
 
         if (e.type == SDL_MOUSEBUTTONUP)
         {
+            if (textbox.IS_INPUT){
+                    SDL_StopTextInput();
+                    std::string l = *(textbox.get_last());
+                    if (!l.empty()) l.erase(0, textbox.input_header_size);
+                    variables["__input"] =  make_var(l);
+                    textbox.IS_INPUT = 0;
+            }
             int px = e.button.x;
             int py = e.button.y;
 
@@ -829,6 +877,26 @@ public:
                 if (e.type == SDL_KEYDOWN)
                 {
                     SDL_Keymod mod = SDL_GetModState();
+                    if ((e.key.keysym.sym == SDLK_RETURN || e.key.keysym.sym == SDLK_KP_ENTER) && textbox.IS_INPUT){
+                        SDL_StopTextInput();
+                        std::string l = *(textbox.get_last());
+                        if (!l.empty()) l.erase(0, textbox.input_header_size);
+                        variables["__input"] =  make_var(l);
+                        textbox.IS_INPUT = 0;
+                        NEED_MORE_EVENTS=1;
+                    }
+                    if ((e.key.keysym.sym == SDLK_BACKSPACE) && textbox.IS_INPUT){
+                        std::string* last = (textbox.get_last());
+                        if (last != nullptr && !(last->empty()) && (last->size() > textbox.input_header_size)){
+                            char lp = last->back();
+                            while((lp & 0xC0) == 0x80 && last->size() > 0){
+                                last->pop_back();
+                                lp = last->back();
+                            }
+                            last->pop_back();
+                        }
+                        
+                    }
                     if (mod & KMOD_CTRL)
                     {
                         if ((e.key.keysym.sym == SDLK_EQUALS && (mod & KMOD_SHIFT)) || e.key.keysym.sym == SDLK_KP_PLUS)
@@ -840,6 +908,10 @@ public:
                             main_font.setSize(main_font.size - 5);
                         }
                     }
+                }
+                else if (e.type == SDL_TEXTINPUT) {
+                    *(textbox.get_last()) += e.text.text;
+                    textbox.refresh_last();
                 }
             }
             if (NEED_MORE_EVENTS)

@@ -1,23 +1,23 @@
 SCRIPT main
-ROW 2
-BG "vetclinic.jpg"
-LDXYWH cock.png 30 30 400 600
 ROW 3
+BG "wp.jpg"
+LUA_IMPORT "useful_functions.lua"
+ROW 5
+BPM "m1.mp3"
+BPMVOL 1
 
 TBCAP "жалкий петух"
-SOUND "v1.ogg"
 TXT "нееет я не хочу лечиться!"
-ROW 2
-SOUND "v2.ogg"
-TXT "я буду послушным обещаю!"
-ROW 4
-SOUND "v3.ogg"
-TXT "не надо меня 'костировать', я больше не буду обижать кука!"
-TXT "я мечтаю вырастить яички вместе с тобой"
-TXT "я люблю тебя дорогая..."
+TALK "1.ogg"
 
-CHSPR 0 "cock_angry.png"
-ROW 2
-CLTB
-LDFILE "script2.bin"
+TXT "я буду послушным обещаю!"
+TALK "2.ogg"
+TALK "3.ogg"
+INPUT "введи текст: "
+
+TXT "nigger ${__input}"
+LUA "clock_coroutine()"
+RET "finale"
+
+
 END

@@ -11,13 +11,3 @@ function clock_coroutine()
     end
 end 
 
-function clock_coroutine()
-    while true do
-        cllast()  -- стираем старое сообщение
-        local t = os.date("%H:%M:%S")  -- текущее время
-        txt(t)   -- выводим новое
-        wait(1)  -- пауза 1 секунда (yield)
-    end
-end 
-
-

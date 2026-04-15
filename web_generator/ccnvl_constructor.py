@@ -33,10 +33,10 @@ def fnv1a_32(s: str) -> int:
 
 class CCNVLBuilder:
     
-    def __init__(self, path="../project1/", outname="../test2.ccnvl", start_scene="script.bin"):
+    def __init__(self, path="../project1/", outname="../build/test2.ccnvl", start_scene="script.bin"):
         self.path = Path(path).resolve()
         self.outname = outname
-        self.dumper_path = "../dumper" # надо переделать чтобы он и в stdout печатал результат
+        self.dumper_path = "../build/dumper" # надо переделать чтобы он и в stdout печатал результат
 
         self.index_db = []
         self.start_scene = start_scene

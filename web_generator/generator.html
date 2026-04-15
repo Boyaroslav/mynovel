@@ -169,6 +169,12 @@ document.addEventListener('keydown', (e) => {
         text = cleanValue(text);
         return `TXT "${text}"\n`;
       };
+      jsGenerator.forBlock['INPUT'] = function (block){
+        console.log(block);
+        let text = jsGenerator.valueToCode(block, "INPUT", jsGenerator.ORDER_ATOMIC) || `""`;
+        text = cleanValue(text);
+        return `INPUT "${text}"\n`;
+      };
       jsGenerator.forBlock['LUA'] = function (block) {
           let text = jsGenerator.valueToCode(block, "TEXT", jsGenerator.ORDER_ATOMIC) || `""`;
           text = cleanValue(text);
@@ -196,6 +202,49 @@ document.addEventListener('keydown', (e) => {
           }
           out += `ENDIF\n`;
           return out;
+      };
+      jsGenerator.forBlock['BPMVOL'] = function (block) {
+        let vol = jsGenerator.valueToCode(block, "VOL", jsGenerator.ORDER_ATOMIC) || "0";
+        name = cleanValue(name);
+        return `BPMVOL ${vol}\n`;
+      };
+
+      jsGenerator.forBlock['SOUNDVOL'] = function (block) {
+        let name = jsGenerator.valueToCode(block, "NAME", jsGenerator.ORDER_ATOMIC) || '""';
+        let vol = jsGenerator.valueToCode(block, "VOL", jsGenerator.ORDER_ATOMIC) || "0";
+        name = cleanValue(name);
+        return `SOUNDVOL "${name}" ${vol}\n`;
+      };
+
+      jsGenerator.forBlock['BPMCROSS'] = function (block) {
+        let name = jsGenerator.valueToCode(block, "NAME", jsGenerator.ORDER_ATOMIC) || '""';
+        let time = jsGenerator.valueToCode(block, "TIME", jsGenerator.ORDER_ATOMIC) || "0";
+        name = cleanValue(name);
+        return `BPMCROSS "${name}" ${time}\n`;
+      };
+
+      jsGenerator.forBlock['SOUNDLOOP'] = function (block) {
+        let name = jsGenerator.valueToCode(block, "NAME", jsGenerator.ORDER_ATOMIC) || '""';
+        let loops = jsGenerator.valueToCode(block, "LOOPS", jsGenerator.ORDER_ATOMIC) || "0";
+        name = cleanValue(name);
+        return `SOUNDLOOP "${name}" ${loops}\n`;
+      };
+
+      jsGenerator.forBlock['SOUNDSTOP'] = function (block) {
+        let name = jsGenerator.valueToCode(block, "NAME", jsGenerator.ORDER_ATOMIC) || '""';
+        name = cleanValue(name);
+        return `SOUNDSTOP "${name}"\n`;
+      };
+
+      jsGenerator.forBlock['BPMFADEOUT'] = function (block) {
+        let time = jsGenerator.valueToCode(block, "TIME", jsGenerator.ORDER_ATOMIC) || "0";
+        return `BPMFADEOUT ${time}\n`;
+      };
+
+      jsGenerator.forBlock['TALK'] = function (block) {
+        let name = jsGenerator.valueToCode(block, "NAME", jsGenerator.ORDER_ATOMIC) || '""';
+        name = cleanValue(name);
+        return `TALK "${name}"\n`;
       };
       
       jsGenerator.forBlock['ROW'] = function (block){
@@ -313,9 +362,9 @@ document.addEventListener('keydown', (e) => {
         name = cleanValue(name);
         return `SOUND "${name}"\n`;
       };
-      jsGenerator.forBlock['BPMFADE'] = function (block){
+      jsGenerator.forBlock['BPMFADEIN'] = function (block) {
         let time = jsGenerator.valueToCode(block, "TIME", jsGenerator.ORDER_ATOMIC) || "0";
-        return `BPMFADE ${time}\n`;
+        return `BPMFADEIN ${time}\n`;
       };
       jsGenerator.forBlock['JMP'] = function (block){
         let target = jsGenerator.valueToCode(block, "TARGET", jsGenerator.ORDER_ATOMIC) || `""`;

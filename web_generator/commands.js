@@ -95,6 +95,18 @@ Blockly.Blocks['TXT'] = {
     this.setColour(COL_TEXT);
   }
 };
+
+Blockly.Blocks['INPUT'] = {
+  init: function () {
+    this.appendValueInput("INPUT")
+      .setCheck("String")
+      .appendField("INPUT");
+    this.setPreviousStatement(true);
+    this.setNextStatement(true);
+    this.setColour(COL_TEXT);
+  }
+};
+
 Blockly.Blocks['IF'] = {
   init: function () {
     this.appendValueInput("VAR")
@@ -194,6 +206,72 @@ Blockly.Blocks['LD'] = {
     this.setPreviousStatement(true);
     this.setNextStatement(true);
     this.setColour(COL_GRAPH);
+  }
+};
+
+Blockly.Blocks['BPMVOL'] = {
+  init: function () {
+    this.appendValueInput("VOL").appendField("BPMVOL");
+    this.setPreviousStatement(true);
+    this.setNextStatement(true);
+    this.setColour(20);
+  }
+};
+
+Blockly.Blocks['SOUNDVOL'] = {
+  init: function () {
+    this.appendValueInput("NAME").appendField("SOUND VOL");
+    this.appendValueInput("VOL").appendField("vol");
+    this.setPreviousStatement(true);
+    this.setNextStatement(true);
+    this.setColour(20);
+  }
+};
+
+Blockly.Blocks['BPMCROSS'] = {
+  init: function () {
+    this.appendValueInput("NAME").appendField("BPM CROSS");
+    this.appendValueInput("TIME").appendField("time");
+    this.setPreviousStatement(true);
+    this.setNextStatement(true);
+    this.setColour(20);
+  }
+};
+
+Blockly.Blocks['SOUNDLOOP'] = {
+  init: function () {
+    this.appendValueInput("NAME").appendField("SOUND LOOP");
+    this.appendValueInput("LOOPS").appendField("loops");
+    this.setPreviousStatement(true);
+    this.setNextStatement(true);
+    this.setColour(20);
+  }
+};
+
+Blockly.Blocks['SOUNDSTOP'] = {
+  init: function () {
+    this.appendValueInput("NAME").appendField("SOUND STOP");
+    this.setPreviousStatement(true);
+    this.setNextStatement(true);
+    this.setColour(20);
+  }
+};
+
+Blockly.Blocks['BPMFADEOUT'] = {
+  init: function () {
+    this.appendValueInput("TIME").appendField("BPM FADE OUT");
+    this.setPreviousStatement(true);
+    this.setNextStatement(true);
+    this.setColour(20);
+  }
+};
+
+Blockly.Blocks['TALK'] = {
+  init: function () {
+    this.appendValueInput("NAME").appendField("TALK");
+    this.setPreviousStatement(true);
+    this.setNextStatement(true);
+    this.setColour(20);
   }
 };
 
@@ -348,7 +426,7 @@ Blockly.Blocks['SOUND'] = {
   }
 };
 
-Blockly.Blocks['BPMFADE'] = {
+Blockly.Blocks['BPMFADEIN'] = {
   init: function () {
     this.appendValueInput("TIME")
       .appendField("BPM FADE");
@@ -411,6 +489,7 @@ const COMMANDS_TOOLBOX = {
       "colour": COL_TEXT, 
       "contents":[
         { "kind":"block","type":"TXT" },
+        { "kind":"block","type":"INPUT" },
         { "kind":"block","type":"LUA" },
         { "kind":"block","type":"CLTB" },
         { "kind":"block","type":"TBCAP" },
@@ -454,7 +533,14 @@ const COMMANDS_TOOLBOX = {
       "contents":[
         { "kind":"block","type":"BPM" },
         { "kind":"block","type":"SOUND" },
-        { "kind":"block","type":"BPMFADE" }
+        { "kind":"block","type":"BPMVOL" },
+        { "kind":"block","type":"SOUNDVOL" },
+        { "kind":"block","type":"BPMCROSS" },
+        { "kind":"block","type":"SOUNDLOOP" },
+        { "kind":"block","type":"SOUNDSTOP" },
+        { "kind":"block","type":"BPMFADEOUT" },
+        { "kind":"block","type":"TALK" },
+        { "kind":"block","type":"BPMFADEIN" }
       ]
     },
     { 

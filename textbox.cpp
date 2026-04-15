@@ -105,6 +105,11 @@ void TextBox::update(float delta_time) {
     }
 }
 
+void TextBox::refresh_last(){
+    message* last_m = &(messages[messages.size()-1]);
+    last_m->chars_shown = last_m->text.size();
+    return;
+}
 
 void TextBox::addMessage(std::string text){
     if(messages.size()) done_messages();
@@ -117,6 +122,11 @@ void TextBox::cl(){
 
 void TextBox::cllast(){
     messages.pop_back();
+}
+
+std::string* TextBox::get_last(){
+    if (messages.size()==0){return nullptr;}
+    return &(messages.back().text);
 }
 
 

@@ -43,9 +43,9 @@ public:
 
     ~Audio()
     {
-        for (auto &[key, chunk] : chunks)
-            Mix_FreeChunk(chunk);
-        chunks.clear();
+        for (auto i = chunks.begin(); i != chunks.end(); i++){
+            Mix_FreeChunk(i->second);
+        }
 
         if (current_music)
         {
@@ -153,25 +153,42 @@ public:
             Mix_PlayMusic(current_music, -1);
     }
 
-    void play_audio(const char *path)
+    void play_audio(const char *path, bool stop_previous=0, int spec_volume=-1)
     {
+        if(stop_previous){
+            log("stop previous!");
+            Mix_HaltChannel(-1);
+            
+        }
         log("SOUND " + std::string(path));
         uint32_t hash = fnv1a_32(path);
+        int ch;
         if (if_sound_in_chunks(hash))
         {
             log(std::string(path) + " IS ALREADY IN CHUNKS");
             Mix_Chunk *i = get_chunk(path);
-            Mix_VolumeMusic(sfx_volume);
-            Mix_PlayChannel(-1, i, 0);
+            
+            ch = Mix_PlayChannel(-1, i, 0);
+            Mix_Volume(ch, (spec_volume == -1) ? sfx_volume : spec_volume);
         }
         else{
             Mix_Chunk* i = load_resource_chunk(path);
             uint32_t hash = fnv1a_32(path);
             chunks[hash] = i;
-            Mix_VolumeMusic(sfx_volume);
-            Mix_PlayChannel(-1, i, 0);
+            ch = Mix_PlayChannel(-1, i, 0);
+            Mix_Volume(ch, (spec_volume == -1) ? sfx_volume : spec_volume);
         }
     }
 
     void stop_music() {}
+    void set_music_volume(int v){
+        bgm_volume = (int)(((double)MIX_MAX_VOLUME / 100.0) * (double)v);
+        Mix_VolumeMusic(bgm_volume);
+    }
+    void set_sound_volume(const char* path, int v){
+        uint32_t hash = fnv1a_32(path);
+
+        sfx_volume = (int)(((double)MIX_MAX_VOLUME / 100.0) * (double)v);
+        Mix_Volume(-1, sfx_volume);
+    }
 };
