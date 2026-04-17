@@ -174,6 +174,7 @@ public:
         else{
             Mix_Chunk* i = load_resource_chunk(path);
             uint32_t hash = fnv1a_32(path);
+            if (i == nullptr){return;}
             chunks[hash] = i;
             ch = Mix_PlayChannel(-1, i, 0);
             Mix_Volume(ch, (spec_volume == -1) ? sfx_volume : spec_volume);

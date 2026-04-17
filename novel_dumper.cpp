@@ -160,8 +160,8 @@ int main(int argc, char **argv)
         }
     }
 
-    char line[512];
-    Scene scenes[64];
+    char line[2048];
+    Scene scenes[128];
     int scene_count = 0;
 
     while (fgets(line, sizeof(line), in))

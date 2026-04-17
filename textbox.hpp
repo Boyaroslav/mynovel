@@ -30,14 +30,17 @@ struct message{
 
 class TextBox{
     protected:
+        SDL_Color Outline_color;
         int step = 1;
         std::string footer;
-        SDL_Rect border = {100, 400, 500, 600};
+        int line_height;
+        SDL_Rect border;
+        int max_lines = 4;
         SDL_Color box_color = to_sdlc(DEFAULT_BOX_COLOR);
         std::vector<message>messages; // [text angry slow] \n [text normal quick and so on]
         std::chrono::steady_clock::time_point last_update;
     public:
-        TextBox(){IS_INPUT=0; input_header_size=0;}
+        TextBox(){IS_INPUT=0; input_header_size=0; IS_HOVERED=0; Outline_color =  to_sdlc(TEXTBOX_OUTLINE_COLOR);}
 
         void addMessage(std::string);
         void cl();
@@ -48,7 +51,11 @@ class TextBox{
         void done_messages();
         std::string* get_last();
         void refresh_last();
+        void handle_mouse_wheel(SDL_Event e);
+        void is_hovered(int px, int py); // hover - парить, зависать - типо мышка наведена ли
+        bool is_last_completed();
         void update_position(int, int);
         bool IS_INPUT;
+        bool IS_HOVERED;
         int input_header_size;
 };

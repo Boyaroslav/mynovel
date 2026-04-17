@@ -31,6 +31,8 @@
 
 #include "settings.cpp"
 
+#define FORCE_CHARS_SHOWN_FLUENCY 1
+
 const int STRING_POOL_SIZE = 65536;
 const int EVENT_POOL_SIZE = 1024;
 const int ARGS_POOL_SIZE = 4096;
@@ -42,6 +44,10 @@ const int TEXT_BOX_HORIZONTAL_PADDING = 100;
 const int TEXT_BOX_VERTICAL_PADDING = 20;
 
 float LETTER_SPEED = 0.07;
+
+#ifdef FORCE_CHARS_SHOWN_FLUENCY
+float MAX_CHARS_SPEED = 1;
+#endif
 
 
 bool IS_CCNVL = false; // если .bin то все как раньше. а если .ccnvl то будем по другому брать фотки, другие файлы там и тд

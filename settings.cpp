@@ -54,4 +54,8 @@ Color DEFAULT_FONT_COLOR = {
     rgbac{255,255,255,255}
 };
 
+Color TEXTBOX_OUTLINE_COLOR = {
+    rgbac{255, 255, 255, 50}
+};
+
 Color DEFAULT_FONT_BORDER_COLOR = {rgbac{0,0,0,255}};

@@ -803,6 +803,14 @@ public:
             textbox.input_header_size = textbox.get_last()->size();
         }
         break;
+        case 36: // TBRECT
+        {
+            int x = apool[current_event->args_offset].value;
+            int y = apool[current_event->args_offset + 1].value;
+            int w = apool[current_event->args_offset + 2].value;
+            int h = apool[current_event->args_offset + 3].value;
+        }
+        break;
         }
         if (isnext_needed)
             nextEvent();
@@ -825,12 +833,14 @@ public:
                     variables["__input"] =  make_var(l);
                     textbox.IS_INPUT = 0;
             }
-            int px = e.button.x;
-            int py = e.button.y;
+            px = e.button.x;
+            py = e.button.y;
 
             if (e.button.button == SDL_BUTTON_LEFT)
             {
-                if (!WAITING)
+                if (!textbox.is_last_completed())
+                    textbox.done_messages();
+                else if (!WAITING)
                     handleEvent();
             }
             else if (e.button.button == SDL_BUTTON_RIGHT)
@@ -909,9 +919,16 @@ public:
                         }
                     }
                 }
-                else if (e.type == SDL_TEXTINPUT) {
+                else if (e.type == SDL_TEXTINPUT && textbox.IS_INPUT) {
                     *(textbox.get_last()) += e.text.text;
                     textbox.refresh_last();
+                }
+                else if (e.type == SDL_MOUSEWHEEL){
+                    textbox.handle_mouse_wheel(e);
+                }
+                else if (e.type == SDL_MOUSEMOTION){
+                    px = e.motion.x;
+                    py = e.motion.y;
                 }
             }
             if (NEED_MORE_EVENTS)
@@ -928,6 +945,7 @@ public:
         float delta_time = (current_time - last_time) / 1000.0f;
         last_time = current_time;
         handle_lua_coroutines(delta_time);
+        textbox.is_hovered(px, py);
 
         if (WAITING)
         {
