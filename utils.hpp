@@ -287,14 +287,14 @@ struct mem_buffer {
 };
 
 
-#ifdef __linux__
+#if defined(__linux__) && !defined(__ANDROID__)
 static ssize_t 
 #else
 static int
 #endif
 
 lcnovel_mem_write_cb(void* cookie, const char* buf,
-    #ifdef __linux__
+    #if defined(__linux__) && !defined(__ANDROID__)
     size_t
     #else
     int
@@ -310,13 +310,13 @@ static int lcnovel_mem_close_cb(void*) {
     return 0;
 }
 
-#ifdef __linux__
+#if defined(__linux__) && !defined(__ANDROID__)
 static ssize_t 
 #else
 static int
 #endif
 lcnovel_mem_read_cb(void* cookie, char* buf,
-    #ifdef __linux__
+    #if defined(__linux__) && !defined(__ANDROID__)
     size_t
     #else 
     int
@@ -365,7 +365,7 @@ static int lcnovel_mem_seek_cb(void* cookie, off_t *offset, int whence){
 }
 
 
-#ifdef __linux__
+#if defined(__linux__) && !defined(__ANDROID__)
 static FILE* lcnovel_open_mem_stream(mem_buffer* mb){
     cookie_io_functions_t mfuncs = {
         .read = lcnovel_mem_read_cb,

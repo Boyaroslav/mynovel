@@ -1091,6 +1091,11 @@ void Screen::qsave(){
 
     update_snapshot();
     FILE* save_file;
+
+    if (save_snapshot.empty()){
+        log("save snapshot is empty!");
+        return;}
+
     if (save_path)
         save_file = fopen(save_path, "wb");
     else
@@ -1101,8 +1106,6 @@ void Screen::qsave(){
         return;
     }
 
-    if (save_snapshot.empty()) return;
-
     fwrite(save_snapshot.data(), 1, save_snapshot.size(), save_file);
 
     //uint32_t scene_hash = fnv1a_32(current_scene_name);
@@ -1112,18 +1115,12 @@ void Screen::qsave(){
 }
 
 void Screen::qload(){
-    epos = 0;
-    apos = 0;
-    spos = 0;
-    textbox->cl();
-
-    IS_CCNVL = 0;
     FILE* save_file;
     if (save_path)
         save_file = fopen(save_path, "rb");
     else
         save_file = fopen("quick_save.ccsave", "rb");
-    sprites.clear();
+
     uint32_t save_version;
     fread(&save_version, sizeof(uint32_t), 1, save_file);
     std::cout<<"VERS "<<save_version<<' '<<VERSION<<"\n";
@@ -1131,6 +1128,14 @@ void Screen::qload(){
         log("The game version is too old!");
         return;
     }
+    epos = 0;
+    apos = 0;
+    spos = 0;
+    textbox->cl();
+
+    IS_CCNVL = 0;
+
+    sprites.clear();
     uint32_t nl; fread(&nl, sizeof(uint32_t), 1, save_file);
     file_name.resize(nl);
     fread(&file_name[0], sizeof(char), nl, save_file);
