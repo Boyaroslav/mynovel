@@ -14,9 +14,6 @@
  * along with CnCn (mynovel). If not, see <https://www.gnu.org/licenses/>.
  */
 
-
-
-
 /*
 для тех функций которым нужен wait, input и тд
 1) можно тупо запрещать сохраняться пока они работают
@@ -34,6 +31,8 @@
 #define LUA_COMMAND_INPUT "input"
 #define LUA_COMMAND_LOG "log"
 #define LUA_COMMAND_CHANGE_SCENE "change_scene"
+#define LUA_COMMAND_LOAD_SPRITE "ld"
+#define LUA_COMMAND_MOVE_SPRITE "move"
 
 struct LuaCoroutine
 {
@@ -41,40 +40,50 @@ struct LuaCoroutine
     float wait_timer = 0.0f;
     int lua_ref = LUA_NOREF;
     int input_waiting = false;
-    int need_to_continue = false;
+    int click_waiting = false;    // короче доп аргумент будет в txt и тд - задерживать ли до нового клика
+    int need_to_continue = false; // я хз че это
 };
 
-class LuaRuntime{
-    public:
+class LuaRuntime
+{
+public:
     lua_State *L = nullptr;
-    std::unordered_map<lua_State*, LuaCoroutine> lstate_coroutine;
+    std::unordered_map<lua_State *, LuaCoroutine> lstate_coroutine;
 
-    void init(){
+    void init()
+    {
         L = luaL_newstate();
         luaL_openlibs(L);
 
         lua_pushlightuserdata(L, this);
 
-        lua_pushcclosure(L, [](lua_State *L) -> int {
+        lua_pushcclosure(L, [](lua_State *L) -> int
+                         {
             auto *self = (LuaRuntime*)lua_touserdata(L, lua_upvalueindex(1));
             const char *text = luaL_checkstring(L, 1);
 
             if (self->TXT)
                 self->TXT(text);
+            
+            if (self->should_wait_click())
+                return self->yield_until_click(L);
 
-            return 0;
-        }, 1);
+            return 0; }, 1);
 
         lua_setglobal(L, LUA_COMMAND_ADD_MESSAGE_TO_TEXTBOX);
 
-                lua_pushlightuserdata(L, this);
+        lua_pushlightuserdata(L, this);
 
         // cl (clear)
         lua_pushlightuserdata(L, this);
-        lua_pushcclosure(L, [](lua_State *L) -> int {
+        lua_pushcclosure(L, [](lua_State *L) -> int
+                         {
             auto *self = (LuaRuntime*)lua_touserdata(L, lua_upvalueindex(1));
             if (self->CLEAR)
                     self->CLEAR();
+
+            if (self->should_wait_click())
+                return self->yield_until_click(L);
             return 0; }, 1);
         lua_setglobal(L, LUA_COMMAND_CLEAR_TEXTBOX);
 
@@ -87,14 +96,13 @@ class LuaRuntime{
             return 0; }, 1);
         lua_setglobal(L, LUA_COMMAND_CLEAR_ONE_MESSAGE);
 
-                lua_pushcfunction(L, [](lua_State *L) -> int
+        lua_pushcfunction(L, [](lua_State *L) -> int
                           {
                               float t = (float)luaL_checknumber(L, 1);
                               lua_pushnumber(L, t);
-                              return lua_yield(L, 1);
-                          });
+                              return lua_yield(L, 1); });
         lua_setglobal(L, "wait");
-                lua_pushlightuserdata(L, this);
+        lua_pushlightuserdata(L, this);
         lua_pushcclosure(L, [](lua_State *L) -> int
                          {
                         auto *self = (LuaRuntime*)lua_touserdata(L, lua_upvalueindex(1));
@@ -112,7 +120,7 @@ class LuaRuntime{
             return lua_yield(L, 0); }, 1);
         lua_setglobal(L, LUA_COMMAND_INPUT);
 
-                lua_pushlightuserdata(L, this);
+        lua_pushlightuserdata(L, this);
         lua_pushcclosure(L, [](lua_State *L) -> int
                          {
             log(luaL_checkstring(L, 1));
@@ -122,40 +130,38 @@ class LuaRuntime{
 
         lua_pushlightuserdata(L, this);
         lua_pushcclosure(L, [](lua_State *L) -> int
-        {
+                         {
             auto *self = (LuaRuntime*)lua_touserdata(L, lua_upvalueindex(1));
             self->sync_vars_to_lua(L);
-            return 0;
-        }, 1);
+            return 0; }, 1);
 
         lua_setglobal(L, "sync");
 
         lua_pushlightuserdata(L, this);
 
-        lua_pushcclosure(L, [](lua_State *L) -> int {
+        lua_pushcclosure(L, [](lua_State *L) -> int
+                         {
             auto *self = (LuaRuntime*)lua_touserdata(L, lua_upvalueindex(1));
             const char *text = luaL_checkstring(L, 1);
 
             if (self->CHSC)
                 self->CHSC(text);
 
-            return 0;
-        }, 1);
+            return 0; }, 1);
 
         lua_setglobal(L, LUA_COMMAND_CHANGE_SCENE);
     }
-    void shotdown(){
-
+    void shotdown()
+    {
     }
 
-
-    std::function<void(const std::string&)> TXT;
-    std::function<void(const std::string&)> INPUT;
-    std::function<void(const std::string&)> CHSC;
+    std::function<void(const std::string &)> TXT;
+    std::function<void(const std::string &)> INPUT;
+    std::function<void(const std::string &)> CHSC;
     std::function<void()> CLEAR;
     std::function<void()> SYNC;
     std::function<void()> CLEAR_LAST;
-    std::function<void(const std::string&)> LOG;
+    std::function<void(const std::string &)> LOG;
 
     void sync_vars_to_lua(lua_State *state)
     {
@@ -171,7 +177,7 @@ class LuaRuntime{
         }
     }
 
-    void lua_load_buffer(const char* data, ssize_t size, const char* name)
+    void lua_load_buffer(const char *data, ssize_t size, const char *name)
     {
         if (luaL_loadbuffer(L, data, size, name) != LUA_OK)
         {
@@ -188,58 +194,60 @@ class LuaRuntime{
         }
     }
 
-    void lua_import_file(const char* file){
+    void lua_import_file(const char *file)
+    {
         if (luaL_dofile(L, file) != LUA_OK)
-            {
-                printf("[LUA_IMPORT ERROR] %s\n", lua_tostring(L, -1));
-                lua_pop(L, 1);
-            }
+        {
+            printf("[LUA_IMPORT ERROR] %s\n", lua_tostring(L, -1));
+            lua_pop(L, 1);
+        }
     }
 
-    void run_string(const std::string& s){
-            lua_State *co = lua_newthread(L);
-            lua_pushthread(co);
-            lua_xmove(co, L, 1);
-            int ref = luaL_ref(L, LUA_REGISTRYINDEX);
+    void run_string(const std::string &s)
+    {
+        lua_State *co = lua_newthread(L);
+        lua_pushthread(co);
+        lua_xmove(co, L, 1);
+        int ref = luaL_ref(L, LUA_REGISTRYINDEX);
 
-            sync_vars_to_lua(co);
+        sync_vars_to_lua(co);
 
-            if (luaL_loadstring(co, s.c_str()) != LUA_OK)
+        if (luaL_loadstring(co, s.c_str()) != LUA_OK)
+        {
+            printf("[LUA ERROR] %s\n", lua_tostring(co, -1));
+            luaL_unref(L, LUA_REGISTRYINDEX, ref);
+        }
+
+        int nres = 0;
+
+        lstate_coroutine[co] = {co, 0.0f, ref};
+        int status = lua_resume(co, L, 0, &nres);
+
+        if (status == LUA_YIELD)
+        {
+
+            if (nres > 0 && lua_isnumber(co, -1))
             {
-                printf("[LUA ERROR] %s\n", lua_tostring(co, -1));
-                luaL_unref(L, LUA_REGISTRYINDEX, ref);
+                lstate_coroutine[co].wait_timer = (float)lua_tonumber(co, -1);
             }
 
-            int nres = 0;
-
-            lstate_coroutine[co] = {co, 0.0f, ref};
-            int status = lua_resume(co, L, 0, &nres);
-
-            if (status == LUA_YIELD)
-            {
-            
-                if (nres > 0 && lua_isnumber(co, -1)){
-                    lstate_coroutine[co].wait_timer = (float)lua_tonumber(co, -1);
-                }
-
-                lua_pop(co, nres);
-                //lua_active_coroutines.push_back({co, t, ref});
-                //lstate_coroutine[co] = &lua_active_coroutines.back();
-            }
-            else if (status == LUA_OK)
-            {
-                lstate_coroutine.erase(co);
-                sync_vars_from_lua(co);
-                luaL_unref(L, LUA_REGISTRYINDEX, ref);
-            }
-            else
-            {
-                printf("[LUA ERROR] %s\n", lua_tostring(co, -1));
-                luaL_unref(L, LUA_REGISTRYINDEX, ref);
-                lstate_coroutine.erase(co);
-            }
-            sync_vars_from_lua(L);
-
+            lua_pop(co, nres);
+            // lua_active_coroutines.push_back({co, t, ref});
+            // lstate_coroutine[co] = &lua_active_coroutines.back();
+        }
+        else if (status == LUA_OK)
+        {
+            lstate_coroutine.erase(co);
+            sync_vars_from_lua(co);
+            luaL_unref(L, LUA_REGISTRYINDEX, ref);
+        }
+        else
+        {
+            printf("[LUA ERROR] %s\n", lua_tostring(co, -1));
+            luaL_unref(L, LUA_REGISTRYINDEX, ref);
+            lstate_coroutine.erase(co);
+        }
+        sync_vars_from_lua(L);
     }
 
     void sync_vars_from_lua(lua_State *state)
@@ -269,10 +277,10 @@ class LuaRuntime{
         lua_pop(state, 1);
     }
 
-     void handle_lua_coroutines(float delta_time)
+    void handle_lua_coroutines(float delta_time)
     {
-        for (auto it = lstate_coroutine.begin(); it != lstate_coroutine.end(); )
-        
+        for (auto it = lstate_coroutine.begin(); it != lstate_coroutine.end();)
+
         {
             LuaCoroutine &coroutine = it->second;
             if (coroutine.input_waiting)
@@ -310,7 +318,8 @@ class LuaRuntime{
         }
     }
 
-    void everybody_inputed(){
+    void everybody_inputed()
+    {
         for (auto &[co, coroutine] : lstate_coroutine)
         {
             if (coroutine.input_waiting)
@@ -319,18 +328,26 @@ class LuaRuntime{
                 coroutine.wait_timer = 0.016f;
             }
         }
-
     }
 
-    bool if_available_for_saving(){
+    bool should_wait_click()
+    {
+        Var v = get_value("wait_click"); // короче эта переменная отвечает за click_waiting
+        return v.is_int() ? v.as_int() != 0 : false;
+    }
+
+    int yield_until_click(lua_State *L)
+    {
+        auto it = lstate_coroutine.find(L);
+        if (it != lstate_coroutine.end())
+            it->second.click_waiting = true;
+        return lua_yield(L, 0);
+    }
+
+    bool if_available_for_saving()
+    {
         // все ли инпутнули
         // все ли вейтанули
         return lstate_coroutine.empty();
-
     }
-
-
-
-
-
 };

@@ -373,6 +373,7 @@ void write_yourself(FILE *ptr){ // пишет про себя все в файл
 
     fwrite(&move_speed, sizeof(float), 1, ptr);
     fwrite(&move_transition, sizeof(float), 1, ptr);
+    fwrite(&hide_transition, sizeof(float), 1, ptr);
     fwrite(&sx, sizeof(int), 1, ptr);
     fwrite(&sy, sizeof(int), 1, ptr);
     fwrite(&tx, sizeof(int), 1, ptr);
@@ -403,6 +404,7 @@ void read_yourself(FILE *ptr, SDL_Renderer* rend){
 
     fread(&move_speed, sizeof(float), 1, ptr);
     fread(&move_transition, sizeof(float), 1, ptr);
+    fread(&hide_transition, sizeof(float), 1, ptr);
     fread(&sx, sizeof(int), 1, ptr);
     fread(&sy, sizeof(int), 1, ptr);
     fread(&tx, sizeof(int), 1, ptr);
