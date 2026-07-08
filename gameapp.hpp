@@ -204,7 +204,7 @@ void Screen::main_menu(){
             #ifdef __ANDROID__
             LOGI("LCNOVELFILE %s", file_name.c_str());
             #endif
-            //load_(file_name.data());
+            load_("script.bin");
             textbox->move_position(0,0);
             textbox->hide();
             change_scene("menu");
@@ -1150,12 +1150,13 @@ void Screen::qload(){
     uint32_t scene_hash;
     fread(&scene_hash, sizeof(uint32_t), 1, save_file);
     uint32_t scene_len; fread(&scene_len, sizeof(uint32_t), 1, save_file);
+    current_scene_name.resize(scene_len);
     fread(&current_scene_name[0], sizeof(char), scene_len, save_file);
     fread(&event_pool_position, sizeof(uint32_t), 1, save_file);
     load_vars(save_file);
 
 
-    load_scene_by_hash(scene_hash, scenes);
+    //load_scene_by_hash(scene_hash, scenes);
     int index = find_scene_index_by_hash(scenes, scene_hash);
     Scene &sc = scenes[index];
     current_scene = &sc;
