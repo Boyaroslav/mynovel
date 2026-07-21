@@ -981,6 +981,7 @@ void Screen::run(abool &run)
                     var_waiting.clear();
                     nextEvent();
                     handleEvent();
+                    update_snapshot();
                 }
                 else
                 {

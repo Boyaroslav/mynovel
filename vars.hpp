@@ -167,37 +167,139 @@ std::string interpolate(const std::string &text)
     return result;
 }
 
-void save_vars(FILE* ptr){
-    for(auto& pair : variables){
-        switch (pair.second.type){
-            case Var::Type::Int:
-            {
+void write_string(FILE *ptr, const std::string &s)
+{
+    uint32_t len = static_cast<uint32_t>(s.size());
+    fwrite(&len, sizeof(len), 1, ptr);
+    if (len > 0)
+        fwrite(s.data(), 1, len, ptr);
+}
 
-            }
+bool read_string(FILE *ptr, std::string &s)
+{
+    uint32_t len = 0;
+    if (fread(&len, sizeof(len), 1, ptr) != 1)
+        return false;
+    s.resize(len);
+    if (len > 0 && fread(&s[0], 1, len, ptr) != len)
+        return false;
+    return true;
+}
+void save_vars(FILE *ptr)
+{
+    std::vector<std::pair<std::string, Var *>> ints, floats, strings, nulls;
+
+    for (auto &pair : variables)
+    {
+        switch (pair.second.type)
+        {
+        case Var::Type::Int:
+            ints.push_back({pair.first, &pair.second});
             break;
-            case Var::Type::Float:
-            {
-
-                
-            }
+        case Var::Type::Float:
+            floats.push_back({pair.first, &pair.second});
             break;
-            case Var::Type::String:
-            {
-
-                
-            }
+        case Var::Type::String:
+            strings.push_back({pair.first, &pair.second});
             break;
-            case Var::Type::Null:
-            {
-
-            }
+        case Var::Type::Null:
+            nulls.push_back({pair.first, &pair.second});
             break;
         }
+    }
 
+    {
+        uint32_t type = static_cast<uint32_t>(Var::Type::Int);
+        uint32_t count = static_cast<uint32_t>(ints.size());
+        fwrite(&type, sizeof(type), 1, ptr);
+        fwrite(&count, sizeof(count), 1, ptr);
+        for (auto &kv : ints)
+        {
+            write_string(ptr, kv.first);
+            fwrite(&kv.second->i, sizeof(kv.second->i), 1, ptr);
+        }
+    }
+
+    {
+        uint32_t type = static_cast<uint32_t>(Var::Type::Float);
+        uint32_t count = static_cast<uint32_t>(floats.size());
+        fwrite(&type, sizeof(type), 1, ptr);
+        fwrite(&count, sizeof(count), 1, ptr);
+        for (auto &kv : floats)
+        {
+            write_string(ptr, kv.first);
+            fwrite(&kv.second->f, sizeof(kv.second->f), 1, ptr);
+        }
+    }
+
+    {
+        uint32_t type = static_cast<uint32_t>(Var::Type::String);
+        uint32_t count = static_cast<uint32_t>(strings.size());
+        fwrite(&type, sizeof(type), 1, ptr);
+        fwrite(&count, sizeof(count), 1, ptr);
+        for (auto &kv : strings)
+        {
+            write_string(ptr, kv.first);
+            write_string(ptr, kv.second->s);
+        }
+    }
+
+    {
+        uint32_t type = static_cast<uint32_t>(Var::Type::Null);
+        uint32_t count = static_cast<uint32_t>(nulls.size());
+        fwrite(&type, sizeof(type), 1, ptr);
+        fwrite(&count, sizeof(count), 1, ptr);
+        for (auto &kv : nulls)
+        {
+            write_string(ptr, kv.first);
+        }
     }
 }
 
+void load_vars(FILE *ptr)
+{
+    variables.clear();
 
-void load_vars(FILE* ptr){
+    for (int s = 0; s < 4; ++s)
+    {
+        uint32_t type_raw;
+        if (fread(&type_raw, sizeof(type_raw), 1, ptr) != 1)
+            return;
 
+        uint32_t count = 0;
+        if (fread(&count, sizeof(count), 1, ptr) != 1)
+            return;
+
+        Var::Type type = static_cast<Var::Type>(type_raw);
+
+        for (uint32_t i = 0; i < count; ++i)
+        {
+            std::string key;
+            if (!read_string(ptr, key))
+                return;
+
+            Var var;
+            var.type = type;
+
+            switch (type)
+            {
+            case Var::Type::Int:
+                if (fread(&var.i, sizeof(var.i), 1, ptr) != 1)
+                    return;
+                break;
+            case Var::Type::Float:
+                if (fread(&var.f, sizeof(var.f), 1, ptr) != 1)
+                    return;
+                break;
+            case Var::Type::String:
+                if (!read_string(ptr, var.s))
+                    return;
+                break;
+            case Var::Type::Null:
+                break;
+            }
+
+            variables[key] = var;
+        }
+    }
 }
