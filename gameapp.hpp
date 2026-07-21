@@ -204,7 +204,7 @@ void Screen::main_menu(){
             #ifdef __ANDROID__
             LOGI("LCNOVELFILE %s", file_name.c_str());
             #endif
-            //load_(file_name.data());
+            load_("script.bin");
             textbox->move_position(0,0);
             textbox->hide();
             change_scene("menu");
@@ -1092,6 +1092,11 @@ void Screen::qsave(){
 
     update_snapshot();
     FILE* save_file;
+
+    if (save_snapshot.empty()){
+        log("save snapshot is empty!");
+        return;}
+
     if (save_path)
         save_file = fopen(save_path, "wb");
     else
@@ -1102,8 +1107,6 @@ void Screen::qsave(){
         return;
     }
 
-    if (save_snapshot.empty()) return;
-
     fwrite(save_snapshot.data(), 1, save_snapshot.size(), save_file);
 
     //uint32_t scene_hash = fnv1a_32(current_scene_name);
@@ -1113,18 +1116,12 @@ void Screen::qsave(){
 }
 
 void Screen::qload(){
-    epos = 0;
-    apos = 0;
-    spos = 0;
-    textbox->cl();
-
-    IS_CCNVL = 0;
     FILE* save_file;
     if (save_path)
         save_file = fopen(save_path, "rb");
     else
         save_file = fopen("quick_save.ccsave", "rb");
-    sprites.clear();
+
     uint32_t save_version;
     fread(&save_version, sizeof(uint32_t), 1, save_file);
     std::cout<<"VERS "<<save_version<<' '<<VERSION<<"\n";
@@ -1132,6 +1129,14 @@ void Screen::qload(){
         log("The game version is too old!");
         return;
     }
+    epos = 0;
+    apos = 0;
+    spos = 0;
+    textbox->cl();
+
+    IS_CCNVL = 0;
+
+    sprites.clear();
     uint32_t nl; fread(&nl, sizeof(uint32_t), 1, save_file);
     file_name.resize(nl);
     fread(&file_name[0], sizeof(char), nl, save_file);
@@ -1146,12 +1151,13 @@ void Screen::qload(){
     uint32_t scene_hash;
     fread(&scene_hash, sizeof(uint32_t), 1, save_file);
     uint32_t scene_len; fread(&scene_len, sizeof(uint32_t), 1, save_file);
+    current_scene_name.resize(scene_len);
     fread(&current_scene_name[0], sizeof(char), scene_len, save_file);
     fread(&event_pool_position, sizeof(uint32_t), 1, save_file);
     load_vars(save_file);
 
 
-    load_scene_by_hash(scene_hash, scenes);
+    //load_scene_by_hash(scene_hash, scenes);
     int index = find_scene_index_by_hash(scenes, scene_hash);
     Scene &sc = scenes[index];
     current_scene = &sc;
