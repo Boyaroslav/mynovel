@@ -192,10 +192,11 @@ public:
             
             int x = luaL_checknumber(L, 2);
             int y = luaL_checknumber(L, 3);
+            int t = luaL_checknumber(L, 4);
             
 
             if (self->MOVE)
-                self->MOVE(i, x, y);
+                self->MOVE(i, x, y, t);
             
             if (self->should_wait_click(L))
                 return self->yield_until_click(L);
@@ -216,7 +217,7 @@ public:
     std::function<void()> CLEAR_LAST;
     std::function<void(const std::string &)> LOG;
     std::function<void(std::string &, int, int, int, int)> LD;
-    std::function<void(int, int, int)> MOVE;
+    std::function<void(int, int, int, int)> MOVE;
 
     void sync_vars_to_lua(lua_State *state)
     {
@@ -416,6 +417,7 @@ public:
         return result;
     }
 
+
     int yield_until_click(lua_State *L)
     {
         auto it = lstate_coroutine.find(L);
@@ -436,6 +438,14 @@ public:
     {
         for (auto &[co, coroutine] : lstate_coroutine)
             if (coroutine.click_waiting)
+                return true;
+        return false;
+    }
+
+    bool has_blocking_coroutine() const
+    {
+        for (auto &[co, coroutine] : lstate_coroutine)
+            if (coroutine.input_waiting || coroutine.click_waiting)
                 return true;
         return false;
     }

@@ -157,6 +157,14 @@ bool Screen::init_()
             std::cout << sprites.size() << "\n";
             log(sprites[sprites.size() - 1].get_rect());
         };
+        lua_runtime.MOVE = [this](int i, int x, int y, int t)
+        {
+            if (i < 0){
+                i = sprites.size() + i;
+            }
+            std::cout<<"MOOVE "<<i<<" "<<x<<' '<<y<<' '<<t<<'\n';
+            sprites[i].move(x, y, t);
+        };
 
         return true;
 }
@@ -363,7 +371,7 @@ void Screen::handleEvent(bool isnext_needed)
                 while (executed < n)
                 {
   
-                    if (!lua_runtime.has_click_waiting_coroutine()){
+                    if (!lua_runtime.has_blocking_coroutine()){
                     nextEvent();
                     handleEvent(false);
                         
@@ -859,14 +867,6 @@ void Screen::handleMouseEvent(const SDL_Event &e)
                 WAS_MOTION = 0;
                 return;
             }
-            if (textbox->IS_INPUT){
-                    SDL_StopTextInput();
-                    std::string l = *(textbox->get_last());
-                    if (!l.empty()) l.erase(0, textbox->input_header_size);
-                    variables["__input"] =  make_var(l);
-                    lua_runtime.everybody_inputed();
-                    textbox->IS_INPUT = 0;
-            }
             px = e.button.x;
             py = e.button.y;
 
@@ -881,11 +881,19 @@ void Screen::handleMouseEvent(const SDL_Event &e)
                     //if (textbox->is_last_completed() && !WAITING)
                     //    handleEvent();
                 }
-                else if (!WAITING && !textbox->WAS_ACTION && !interface->smth_pressed && !lua_runtime.has_click_waiting_coroutine())
+                else if (!WAITING && !textbox->WAS_ACTION && !interface->smth_pressed && !lua_runtime.has_blocking_coroutine())
                     NEED_MORE_EVENTS=1;
 
                     
 
+            }
+            if (textbox->IS_INPUT){
+                    SDL_StopTextInput();
+                    std::string l = *(textbox->get_last());
+                    if (!l.empty()) l.erase(0, textbox->input_header_size);
+                    variables["__input"] =  make_var(l);
+                    lua_runtime.everybody_inputed();
+                    textbox->IS_INPUT = 0;
             }
             lua_runtime.everybody_clicked();
         }
@@ -929,6 +937,10 @@ void Screen::run(abool &run)
                 {
                     SDL_Keymod mod = SDL_GetModState();
                     if ((e.key.keysym.sym == SDLK_RETURN || e.key.keysym.sym == SDLK_KP_ENTER) && textbox->IS_INPUT){
+                        if(!lua_runtime.has_blocking_coroutine()){
+                            NEED_MORE_EVENTS = 1;
+                        }
+                        
                         SDL_StopTextInput();
                         std::string l = *(textbox->get_last());
                         if (!l.empty()) l.erase(0, textbox->input_header_size);
@@ -936,7 +948,7 @@ void Screen::run(abool &run)
                         lua_runtime.everybody_inputed();
                         textbox->IS_INPUT = 0;
                         
-                        NEED_MORE_EVENTS=1;
+                        
                     }
                     else if ((e.key.keysym.sym == SDLK_BACKSPACE) && textbox->IS_INPUT){
                         std::string* last = (textbox->get_last());
@@ -1001,7 +1013,7 @@ void Screen::run(abool &run)
                 if (var_waiting.empty() || get_value(var_waiting).as_int() == 1)
                 {
                     var_waiting.clear();
-                    if (!lua_runtime.has_click_waiting_coroutine()){
+                    if (!lua_runtime.has_blocking_coroutine()){
                     nextEvent();
                     handleEvent();
                     update_snapshot();
