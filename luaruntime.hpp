@@ -65,7 +65,7 @@ public:
             if (self->TXT)
                 self->TXT(text);
             
-            if (self->should_wait_click())
+            if (self->should_wait_click(L))
                 return self->yield_until_click(L);
 
             return 0; }, 1);
@@ -82,7 +82,7 @@ public:
             if (self->CLEAR)
                     self->CLEAR();
 
-            if (self->should_wait_click())
+            if (self->should_wait_click(L))
                 return self->yield_until_click(L);
             return 0; }, 1);
         lua_setglobal(L, LUA_COMMAND_CLEAR_TEXTBOX);
@@ -117,6 +117,7 @@ public:
                     self->INPUT(text);
 
 
+
             return lua_yield(L, 0); }, 1);
         lua_setglobal(L, LUA_COMMAND_INPUT);
 
@@ -124,6 +125,8 @@ public:
         lua_pushcclosure(L, [](lua_State *L) -> int
                          {
             log(luaL_checkstring(L, 1));
+
+
 
             return 0; }, 1);
         lua_setglobal(L, LUA_COMMAND_LOG);
@@ -133,6 +136,10 @@ public:
                          {
             auto *self = (LuaRuntime*)lua_touserdata(L, lua_upvalueindex(1));
             self->sync_vars_to_lua(L);
+
+            if (self->should_wait_click(L))
+                return self->yield_until_click(L);
+
             return 0; }, 1);
 
         lua_setglobal(L, "sync");
@@ -146,10 +153,56 @@ public:
 
             if (self->CHSC)
                 self->CHSC(text);
+            
+            if (self->should_wait_click(L))
+                return self->yield_until_click(L);
 
             return 0; }, 1);
 
         lua_setglobal(L, LUA_COMMAND_CHANGE_SCENE);
+
+        lua_pushlightuserdata(L, this);
+
+        lua_pushcclosure(L, [](lua_State *L) -> int
+                         {
+            auto *self = (LuaRuntime*)lua_touserdata(L, lua_upvalueindex(1));
+            std::string text = const_cast<char*>(luaL_checkstring(L, 1));
+            int x = luaL_checkinteger(L, 2);
+            int y = luaL_checkinteger(L, 3);
+            int w = luaL_checkinteger(L, 4);
+            int h = luaL_checkinteger(L, 5);
+
+            if (self->LD)
+                self->LD(text, x, y, w, h);
+            
+            if (self->should_wait_click(L))
+                return self->yield_until_click(L);
+
+            return 0; }, 1);
+
+        lua_setglobal(L, LUA_COMMAND_LOAD_SPRITE);
+
+
+        lua_pushlightuserdata(L, this);
+
+        lua_pushcclosure(L, [](lua_State *L) -> int
+                         {
+            auto *self = (LuaRuntime*)lua_touserdata(L, lua_upvalueindex(1));
+            int i = luaL_checknumber(L, 1);
+            
+            int x = luaL_checknumber(L, 2);
+            int y = luaL_checknumber(L, 3);
+            
+
+            if (self->MOVE)
+                self->MOVE(i, x, y);
+            
+            if (self->should_wait_click(L))
+                return self->yield_until_click(L);
+
+            return 0; }, 1);
+
+        lua_setglobal(L, LUA_COMMAND_MOVE_SPRITE);
     }
     void shotdown()
     {
@@ -162,6 +215,8 @@ public:
     std::function<void()> SYNC;
     std::function<void()> CLEAR_LAST;
     std::function<void(const std::string &)> LOG;
+    std::function<void(std::string &, int, int, int, int)> LD;
+    std::function<void(int, int, int)> MOVE;
 
     void sync_vars_to_lua(lua_State *state)
     {
@@ -209,6 +264,7 @@ public:
         lua_pushthread(co);
         lua_xmove(co, L, 1);
         int ref = luaL_ref(L, LUA_REGISTRYINDEX);
+        bool waiting_click = 0;
 
         sync_vars_to_lua(co);
 
@@ -232,6 +288,7 @@ public:
             }
 
             lua_pop(co, nres);
+            waiting_click = lstate_coroutine[co].click_waiting;
             // lua_active_coroutines.push_back({co, t, ref});
             // lstate_coroutine[co] = &lua_active_coroutines.back();
         }
@@ -289,6 +346,12 @@ public:
                 continue;
             }
 
+            if (coroutine.click_waiting)
+            {
+                ++it;
+                continue;
+            }
+
             if (coroutine.wait_timer > 0.0f)
             {
                 coroutine.wait_timer -= delta_time;
@@ -329,11 +392,28 @@ public:
             }
         }
     }
-
-    bool should_wait_click()
+    void everybody_clicked()
     {
-        Var v = get_value("wait_click"); // короче эта переменная отвечает за click_waiting
-        return v.is_int() ? v.as_int() != 0 : false;
+        for (auto &[co, coroutine] : lstate_coroutine)
+        {
+            if (coroutine.click_waiting)
+            {
+                coroutine.click_waiting = false;
+                coroutine.wait_timer = 0.016f;
+            }
+        }
+    }
+
+    bool should_wait_click(lua_State* L) // напрямую берем переменную
+    {
+        lua_getglobal(L, "wait_click");
+        bool result = false;
+        if (lua_isnumber(L, -1))
+            result = lua_tonumber(L, -1) != 0;
+        else
+            result = lua_toboolean(L, -1);
+        lua_pop(L, 1);
+        return result;
     }
 
     int yield_until_click(lua_State *L)
@@ -344,10 +424,25 @@ public:
         return lua_yield(L, 0);
     }
 
+
     bool if_available_for_saving()
     {
         // все ли инпутнули
         // все ли вейтанули
         return lstate_coroutine.empty();
+    }
+
+    bool has_click_waiting_coroutine() const
+    {
+        for (auto &[co, coroutine] : lstate_coroutine)
+            if (coroutine.click_waiting)
+                return true;
+        return false;
+    }
+
+    bool is_click_waiting(lua_State *co) const
+    {
+        auto it = lstate_coroutine.find(co);
+        return it != lstate_coroutine.end() && it->second.click_waiting;
     }
 };

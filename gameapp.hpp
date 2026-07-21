@@ -86,13 +86,14 @@ bool Screen::init_()
             window,
             -1,
             SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
-        SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
 
         if (!renderer)
         {
             log("SDL_CreateRenderer error");
             return false;
         }
+        SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
+
 
         SDL_RenderSetLogicalSize(renderer, width, height);
         vars_init();
@@ -144,6 +145,17 @@ bool Screen::init_()
         {
             change_scene(text.c_str());
             NEED_MORE_EVENTS = 1;
+        };
+
+        lua_runtime.LD = [this](std::string & file, int x, int y, int w, int h)
+        {
+            last_id++;
+            SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
+            SDL_SetRenderTarget(renderer, nullptr);
+            log("LD: " + std::string(file));
+            sprites.emplace_back(renderer, file.c_str(), x, y, w, h);
+            std::cout << sprites.size() << "\n";
+            log(sprites[sprites.size() - 1].get_rect());
         };
 
         return true;
@@ -244,6 +256,7 @@ void Screen::nextEvent()
             exit(0);
             return;
         }
+
         std::cout << function_commands_left << " - fcl \n";
 
         // 1. Получаем событие из текущей позиции (оно станет текущим для обработки)
@@ -349,11 +362,16 @@ void Screen::handleEvent(bool isnext_needed)
 
                 while (executed < n)
                 {
+  
+                    if (!lua_runtime.has_click_waiting_coroutine()){
                     nextEvent();
                     handleEvent(false);
+                        
                     // считаем только если не внутри функции
                     if (function_commands_left == 0)
                         executed++;
+
+                    }
                 }
                 IN_ROW = false;
                 //NEED_MORE_EVENTS=1;
@@ -863,10 +881,14 @@ void Screen::handleMouseEvent(const SDL_Event &e)
                     //if (textbox->is_last_completed() && !WAITING)
                     //    handleEvent();
                 }
-                else if (!WAITING && !textbox->WAS_ACTION && !interface->smth_pressed)
+                else if (!WAITING && !textbox->WAS_ACTION && !interface->smth_pressed && !lua_runtime.has_click_waiting_coroutine())
                     NEED_MORE_EVENTS=1;
 
-            }}
+                    
+
+            }
+            lua_runtime.everybody_clicked();
+        }
             else if (e.button.button == SDL_BUTTON_RIGHT)
             {
             }
@@ -979,9 +1001,11 @@ void Screen::run(abool &run)
                 if (var_waiting.empty() || get_value(var_waiting).as_int() == 1)
                 {
                     var_waiting.clear();
+                    if (!lua_runtime.has_click_waiting_coroutine()){
                     nextEvent();
                     handleEvent();
                     update_snapshot();
+                    }
                 }
                 else
                 {
