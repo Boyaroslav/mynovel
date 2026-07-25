@@ -33,6 +33,7 @@
 #define LUA_COMMAND_CHANGE_SCENE "change_scene"
 #define LUA_COMMAND_LOAD_SPRITE "ld"
 #define LUA_COMMAND_MOVE_SPRITE "move"
+#define LUA_COMMAND_CAMERA_COMMAND "camera"
 
 struct LuaCoroutine
 {
@@ -204,6 +205,31 @@ public:
             return 0; }, 1);
 
         lua_setglobal(L, LUA_COMMAND_MOVE_SPRITE);
+
+                lua_pushlightuserdata(L, this);
+
+        lua_pushcclosure(L, [](lua_State *L) -> int
+                         {
+            auto *self = (LuaRuntime*)lua_touserdata(L, lua_upvalueindex(1));
+            int tx = luaL_checknumber(L, 1);
+            
+            int ty = luaL_checknumber(L, 2);
+            double z = luaL_checknumber(L, 3);
+            double a = luaL_checknumber(L, 4);
+
+            int type = luaL_checkinteger(L, 5);
+            double dur = luaL_checknumber(L, 6);
+            
+
+            if (self->CAMERA_COMMAND)
+                self->CAMERA_COMMAND(tx, ty, z, a, type, dur);
+            
+            if (self->should_wait_click(L))
+                return self->yield_until_click(L);
+
+            return 0; }, 1);
+
+        lua_setglobal(L, LUA_COMMAND_CAMERA_COMMAND);
     }
     void shotdown()
     {
@@ -218,6 +244,7 @@ public:
     std::function<void(const std::string &)> LOG;
     std::function<void(std::string &, int, int, int, int)> LD;
     std::function<void(int, int, int, int)> MOVE;
+    std::function<void(int, int, float, float, int, float)>CAMERA_COMMAND;
 
     void sync_vars_to_lua(lua_State *state)
     {

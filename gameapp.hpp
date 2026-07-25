@@ -108,6 +108,8 @@ bool Screen::init_()
 
 
         textbox = std::make_unique<TextBox>();
+        camera = std::make_unique<Camera>();
+        camera->init(renderer, width, height);
         if (if_its_game == 0){
             textbox->hide();
         }
@@ -162,10 +164,13 @@ bool Screen::init_()
             if (i < 0){
                 i = sprites.size() + i;
             }
-            std::cout<<"MOOVE "<<i<<" "<<x<<' '<<y<<' '<<t<<'\n';
+
             sprites[i].move(x, y, t);
         };
 
+        lua_runtime.CAMERA_COMMAND = [this](int tx, int ty, double zoom, double angle, int type, double duration){
+            camera->add_operation(tx, ty, zoom, angle, type, duration);
+        };
         return true;
 }
 
@@ -905,6 +910,7 @@ void Screen::handleMouseEvent(const SDL_Event &e)
 
 void Screen::run(abool &run)
 {
+        camera->set_renderer(renderer);
         last_time = SDL_GetTicks();
         textbox->update_position(width, height);
         //nextEvent();
@@ -1061,6 +1067,7 @@ void Screen::update_and_render()
 
         textbox->update(delta_time);
         bg.update(delta_time);
+        camera->update(delta_time);
 
         SDL_RenderClear(renderer);
         bg.draw(renderer);
@@ -1070,6 +1077,7 @@ void Screen::update_and_render()
         }
         textbox->draw(renderer);
         interface->draw(renderer, px, py);
+        camera->draw(renderer);
         SDL_RenderPresent(renderer);
 }
 
@@ -1082,6 +1090,8 @@ void Screen::clean()
         Mix_CloseAudio();
         TTF_Quit();
         IMG_Quit();
+
+        camera->finish_renderer(renderer);
 
         if (renderer)
             SDL_DestroyRenderer(renderer);

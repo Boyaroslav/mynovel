@@ -4,6 +4,12 @@ set(CMAKE_CXX_STANDARD 20)
 
 option(SYSTEM_SDL "Use system-installed SDL2 instead of building from source" OFF)
 
+file(GLOB SRC
+    main.cpp
+    *.cpp
+)
+
+
 if(SYSTEM_SDL)
     list(APPEND CMAKE_PREFIX_PATH "/opt/homebrew")
     find_package(SDL2 REQUIRED)
@@ -83,13 +89,24 @@ list(REMOVE_ITEM LUA_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/lua/luac.c)
 list(REMOVE_ITEM LUA_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/lua/onelua.c)
 add_library(lua_lib STATIC ${LUA_SOURCES})
 target_include_directories(lua_lib PUBLIC lua/)
+if(ANDROID)
+    add_library(main SHARED ${SRC})
 
-add_executable(lcnovel main.cpp)
-add_executable(dumper novel_dumper.cpp)
-if(WIN32)
-    target_link_options(lcnovel PRIVATE -mconsole)
-    target_link_options(dumper PRIVATE -mconsole)
+    target_link_libraries(main
+        SDL2::SDL2main
+        SDL2::image
+        SDL2::ttf
+        SDL2::mixer
+        lua_lib
+    )
+else()
+    add_executable(lcnovel main.cpp)
+    add_executable(dumper novel_dumper.cpp)
+    target_link_libraries(lcnovel ${SDL_LIBS} lua_lib)
+    target_link_libraries(dumper ${SDL_LIBS})
+    if(WIN32)
+        target_link_options(lcnovel PRIVATE -mconsole)
+        target_link_options(dumper PRIVATE -mconsole)
+    endif()
+
 endif()
-
-target_link_libraries(lcnovel ${SDL_LIBS} lua_lib)
-target_link_libraries(dumper ${SDL_LIBS})

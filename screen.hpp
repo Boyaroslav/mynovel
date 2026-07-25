@@ -25,6 +25,7 @@
 #include "gamemixer.hpp"
 #include "luaruntime.hpp"
 #include "interface.hpp"
+#include "camera.hpp"
 #include <setjmp.h>
 
 class Screen
@@ -37,6 +38,7 @@ private:
     int event_pool_position = 0;
     uint32_t last_time;
     std::unique_ptr<Menu> interface;
+    std::unique_ptr<Camera> camera;
     bool if_result = 1;
     Audio audio;
 
