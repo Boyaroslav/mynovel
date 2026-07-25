@@ -1,3 +1,8 @@
 [submodule "lua"]
 	path = lua
 	url = https://github.com/lua/lua.git
+
+
+[submodule "tomlplusplus"]
+	path = tomlplusplus
+	url = https://github.com/marzer/tomlplusplus.git
