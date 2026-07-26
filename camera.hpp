@@ -88,6 +88,7 @@ class Camera{
     }
 
     void camera_reset(){
+        cops.clear();
         center_x=w/2;
         center_y=h/2;
         moved_x=0;moved_y=0;zoom=1.0;

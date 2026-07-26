@@ -183,7 +183,10 @@ void TextBox::set_footer(std::string t)
     footer = t;
 }
 
-bool TextBox::is_last_completed(){return messages.size()==1 ? messages[messages.size()-1].is_complete : 1;}
+bool TextBox::is_last_completed(){
+    if (messages.empty()) return true;
+    return messages.back().is_complete;
+}
 
 void TextBox::done_messages()
 {

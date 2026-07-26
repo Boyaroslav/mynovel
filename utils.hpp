@@ -55,7 +55,7 @@ const int REMOVE_LINES = 0; // remove lines when the number reaches max_lines
 
 float LETTER_SPEED = 0.07;
 
-int text_box_scroll_step = 30;
+int text_box_scroll_step = 8;
 
 int INVERSED_SCROLL = 1;
 

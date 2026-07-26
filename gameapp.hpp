@@ -220,6 +220,7 @@ void Screen::main_menu(){
         if (!need_to_do){
         need_to_do = [this]{
             textbox->cl();
+            camera->camera_reset();
             sprites.clear();
             
             bg.clear();
@@ -235,6 +236,8 @@ void Screen::main_menu(){
             change_scene("menu");
             interface = make_main_menu(width, height, this);
             interface->show();
+
+            
         };
     }
 }
