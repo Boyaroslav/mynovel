@@ -78,7 +78,7 @@ class CCNVLBuilder:
             if f.is_dir() and f.name.startswith("chunk"):
                 files = [sub for sub in f.iterdir() if sub.is_file()]
                 self.chunks[f.name] = files
-            elif f.is_file() and f.suffix.lower() in [".png", ".ogg", ".wav", ".lua", ".jpg", ".opus", ".mp3"]:
+            elif f.is_file() and f.suffix.lower() in [".png", ".ogg", ".wav", ".lua", ".jpg", ".opus", ".mp3", ".toml"]:
                 self.resources.append(f)
         print("Resources found:")
         for r in self.resources:

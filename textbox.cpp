@@ -32,11 +32,16 @@ void TextBox::draw(SDL_Renderer *rend)
 {
     if(hidden) return;
     if (!rend) return;
-    SDL_RenderSetClipRect(rend, &border);
+
+    
+    SDL_RenderSetClipRect(rend, IS_TOML?  &tb_border : &border);
+    if (IS_SPRITE) tb_sprite.draw(rend);
+
+    if (draw_frame){
     SDL_SetRenderDrawColor(rend, box_color.r, box_color.g, box_color.b, box_color.a);
     SDL_RenderFillRect(rend, &border);
+    }
 
-    int padding = 20;
     r_aws.clear();
     int max_width = border.w - padding * 2;
     std::vector<std::vector<text_line>> lines;
@@ -57,7 +62,7 @@ void TextBox::draw(SDL_Renderer *rend)
 
             if (c == " ")
             {
-                if (main_font.measure(current_line, word).x > max_width)
+                if (text_box_font.measure(current_line, word).x > max_width)
                 {
                     lines.push_back(current_line);
                     current_line.clear();
@@ -84,7 +89,7 @@ void TextBox::draw(SDL_Renderer *rend)
 
         if (!word.empty() || !current_line.empty())
         {
-            if (main_font.measure(current_line, word).x > max_width)
+            if (text_box_font.measure(current_line, word).x > max_width)
             {
                 lines.push_back(current_line);
                 lines.push_back({ word });
@@ -98,7 +103,7 @@ void TextBox::draw(SDL_Renderer *rend)
     }
 
     // высота строки
-    line_height = main_font.measure("A").y + 6;
+    line_height = text_box_font.measure("A").y + 6;
 
     // если строк слишком много — оставляем только последние (как в чате)
     if (((int)lines.size() > max_lines) && REMOVE_LINES)
@@ -120,6 +125,7 @@ void TextBox::draw(SDL_Renderer *rend)
 
 
     // рендерим строки
+    SDL_RenderSetClipRect(rend, &border);
     for (auto &line : lines)
     {
         int cur_x = x;
@@ -128,11 +134,11 @@ void TextBox::draw(SDL_Renderer *rend)
                 const std::string &text = std::get<std::string>(part);
                 if (text.empty()) continue;
 
-                SDL_Texture *tex = main_font.renderOutlined(rend, text,
+                SDL_Texture *tex = text_box_font.renderOutlined(rend, text,
                     DEFAULT_FONT_COLOR, DEFAULT_FONT_BORDER_COLOR);
                 if (!tex) continue;
 
-                SDL_Point sz = main_font.measure(text);
+                SDL_Point sz = text_box_font.measure(text);
                 SDL_Rect dst{cur_x, y -(int)target_scroll_y, sz.x, sz.y};
                 SDL_RenderCopy(rend, tex, nullptr, &dst);
                 SDL_DestroyTexture(tex);
@@ -143,11 +149,11 @@ void TextBox::draw(SDL_Renderer *rend)
             const ActiveWord &aw = std::get<ActiveWord>(part);
             if (aw.text.empty()) continue;
 
-            SDL_Texture *tex = main_font.renderOutlinedUnderlineBold(rend, aw.text,
+            SDL_Texture *tex = text_box_font.renderOutlinedUnderlineBold(rend, aw.text,
                 ACTIVE_FONT_COLOR, DEFAULT_ACTIVE_FONT_BORDER_COLOR);
             if (!tex) continue;
 
-            SDL_Point sz = main_font.measure(aw.text);
+            SDL_Point sz = text_box_font.measure(aw.text);
             SDL_Rect dst{cur_x, y - (int)target_scroll_y, sz.x, sz.y};
             SDL_RenderCopy(rend, tex, nullptr, &dst);
             SDL_DestroyTexture(tex);
@@ -160,7 +166,8 @@ void TextBox::draw(SDL_Renderer *rend)
     }
     y += line_height;
     }
-    if (IS_HOVERED) {
+    SDL_RenderSetClipRect(rend, nullptr);
+    if (IS_HOVERED && draw_frame) {
         
         SDL_SetRenderDrawColor(rend, Outline_color.r, Outline_color.g, Outline_color.b, Outline_color.a);
         SDL_RenderDrawRect(rend, &border);
@@ -168,7 +175,7 @@ void TextBox::draw(SDL_Renderer *rend)
         SDL_Rect thick_border = {border.x + 1, border.y + 1, border.w - 2, border.h - 2};
         SDL_RenderDrawRect(rend, &thick_border);
     }
-    SDL_RenderSetClipRect(rend, nullptr);
+
 }
 
 void TextBox::set_footer(std::string t)
@@ -284,6 +291,7 @@ std::string *TextBox::get_last()
 
 void TextBox::update_position(int w, int h)
 {
+    if (IS_TOML) return; // там по харду задаются размеры
     border.x = move_x + TEXT_BOX_HORIZONTAL_PADDING;
     border.w = w - TEXT_BOX_HORIZONTAL_PADDING * 2;
     border.h = h / 3;
@@ -436,4 +444,41 @@ void TextBox::read_yourself(FILE* ptr){
                   std::chrono::duration<float>(elapsed_seconds));
         messages.emplace_back(text, speed, start_time, aw, chars_shown, is_complete);
     }
+}
+
+
+void TextBox::load_toml(SDL_Renderer* rend, std::string t){
+    configuration = read_toml("textbox.toml");
+    if (configuration.empty()) return;
+
+    IS_TOML = 1;
+
+    border = { 
+        configuration["textarea"]["x"].value_or(0) + (width - configuration["textarea"]["width"].value_or(0)) / 2,
+        height - configuration["textarea"]["height"].value_or(0) - configuration["textarea"]["y"].value_or(0),
+        configuration["textarea"]["width"].value_or(0),
+        configuration["textarea"]["height"].value_or(0)
+    }; // бордер это для текста и рамки. для спрайта боксы -  tb_border
+
+    tb_border = {
+        configuration["textbox"]["x"].value_or(0) + (width - configuration["textbox"]["width"].value_or(0)) / 2,
+        height - configuration["textbox"]["height"].value_or(0) - configuration["textbox"]["y"].value_or(0),
+        configuration["textbox"]["width"].value_or(0),
+        configuration["textbox"]["height"].value_or(0)
+    };
+
+    padding = configuration["textarea"]["padding"].value_or(20);
+
+    std::string texture_name = configuration["textbox"]["image"].value_or("");
+    
+    if (texture_name.size()){
+    tb_sprite.load_texture(rend, (texture_name).c_str());
+
+    tb_sprite.set_rect(tb_border);
+    IS_SPRITE = 1;
+    }
+    draw_frame = (bool)configuration["textbox"]["draw_frame"].value_or(0);
+    std::string f = configuration["textarea"]["font"].value_or<std::string>(DEFAULT_FONT);
+    text_box_font.load(f.c_str());
+
 }

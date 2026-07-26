@@ -916,6 +916,8 @@ void Screen::run(abool &run)
         //nextEvent();
 
         //handleEvent();
+        textbox->load_toml(renderer, "textbox.toml");
+
 
 
         while (run && running)

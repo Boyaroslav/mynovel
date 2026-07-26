@@ -29,8 +29,9 @@ public:
 
     Font() = default;
 
-    bool load()
+    bool load(const char* f = "")
     {
+        if (!f || f[0] == '\0'){
         const char* fonts_to_try[] = {
             FONT,
             DEFAULT_FONT,
@@ -51,6 +52,15 @@ public:
             if (font)
             {
                 log("Loaded font: " + std::string(path));
+                TTF_SetFontOutline(font, 1);
+                return true;
+            }
+        }
+        }
+        else{
+            font = TTF_OpenFont(f, size);
+            if (font)
+            {
                 TTF_SetFontOutline(font, 1);
                 return true;
             }

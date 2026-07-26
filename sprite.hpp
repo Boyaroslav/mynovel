@@ -14,6 +14,8 @@
  * along with CnCn (mynovel). If not, see <https://www.gnu.org/licenses/>.
  */
 
+
+#pragma once
 #include "utils.hpp"
 
 struct sprite_texture {

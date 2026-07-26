@@ -83,11 +83,15 @@ else()
     set(SDL_LIBS SDL2::SDL2-static SDL2::image SDL2::ttf SDL2::mixer)
 endif()
 
+add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/tomlplusplus)
+
 file(GLOB LUA_SOURCES lua/*.c)
+
 list(REMOVE_ITEM LUA_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/lua/lua.c)
 list(REMOVE_ITEM LUA_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/lua/luac.c)
 list(REMOVE_ITEM LUA_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/lua/onelua.c)
 add_library(lua_lib STATIC ${LUA_SOURCES})
+
 target_include_directories(lua_lib PUBLIC lua/)
 if(ANDROID)
     add_library(main SHARED ${SRC})
@@ -98,11 +102,12 @@ if(ANDROID)
         SDL2::ttf
         SDL2::mixer
         lua_lib
+        tomlplusplus::tomlplusplus
     )
 else()
     add_executable(lcnovel main.cpp)
     add_executable(dumper novel_dumper.cpp)
-    target_link_libraries(lcnovel ${SDL_LIBS} lua_lib)
+    target_link_libraries(lcnovel ${SDL_LIBS} lua_lib tomlplusplus::tomlplusplus)
     target_link_libraries(dumper ${SDL_LIBS})
     if(WIN32)
         target_link_options(lcnovel PRIVATE -mconsole)

@@ -24,6 +24,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include "pool.hpp"
+#include "tomlplusplus/toml.hpp"
 
 int load_bin_from_ccnvl(FILE *, uint32_t, uint32_t, std::vector<Scene> &);
 
@@ -468,4 +469,40 @@ Scene* find_scene_by_position(std::vector<Scene>& scenes, uint32_t pos) {
     }
     log("scene not found");
     return nullptr;
+}
+
+
+toml::table read_toml(std::string t){
+    toml::table tbl;
+
+    if (!ccnvl_file)
+    {
+        printf("CCNVL not loaded\n");
+        return tbl;
+    }
+
+    uint32_t hash = fnv1a_32(t);
+
+    auto it = ccnvl_resources.find(hash);
+    if (it == ccnvl_resources.end()){
+        log("Can not find " + t);
+        return tbl;
+    }
+
+    const index_db_element& f = it->second;
+    
+
+    std::string buf(reinterpret_cast<char*>(ccnvl_data + f.offset), f.size);
+    try{
+    tbl = toml::parse(buf);
+    }
+    catch(const toml::parse_error& e){
+        log("ERROR " + std::string(e.what()));
+
+    }
+
+    return tbl;
+
+
+    
 }
