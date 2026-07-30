@@ -53,7 +53,7 @@ const char* save_path = "";
 
 const int REMOVE_LINES = 0; // remove lines when the number reaches max_lines
 
-float LETTER_SPEED = 0.07;
+float LETTER_SPEED = 3.0;
 
 int text_box_scroll_step = 8;
 

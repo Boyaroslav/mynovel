@@ -117,7 +117,7 @@ void TextBox::draw(SDL_Renderer *rend)
 
     // готовим ещё не запечённое (печатающееся) последнее сообщение
     std::vector<std::vector<text_line>> current_lines;
-    if (!messages.empty() && !messages.back().is_complete)
+    if (!messages.empty() && (!messages.back().is_complete || IS_INPUT || !messages.back().be.tex))
         current_lines = split_message(messages.back());
 
     // считаем полную высоту контента для скролла
@@ -506,6 +506,10 @@ void TextBox::read_yourself(FILE* ptr){
 
 void TextBox::load_toml(SDL_Renderer* rend, std::string t){
     configuration = read_toml("textbox.toml");
+
+    std::string f = configuration["textarea"]["font"].value_or<std::string>(DEFAULT_FONT);
+    text_box_font.load(f.c_str());
+
     if (configuration.empty()) return;
 
     IS_TOML = 1;
@@ -535,8 +539,7 @@ void TextBox::load_toml(SDL_Renderer* rend, std::string t){
     IS_SPRITE = 1;
     }
     draw_frame = (bool)configuration["textbox"]["draw_frame"].value_or(0);
-    std::string f = configuration["textarea"]["font"].value_or<std::string>(DEFAULT_FONT);
-    text_box_font.load(f.c_str());
+
 
 }
 
@@ -546,6 +549,7 @@ void TextBox::bake_completed(SDL_Renderer* rend)
 
     for (auto& msg : messages)
     {
+        if ((&msg == &messages.back()) && IS_INPUT) continue;
         if (!msg.is_complete) continue;
         if (msg.be.tex != nullptr) continue;
 
