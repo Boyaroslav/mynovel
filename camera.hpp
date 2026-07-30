@@ -44,6 +44,7 @@ float linear(float t, float start, float end, bool inverted=0){
 
 class Camera{
     private:
+    int bx=0, by=0;
 
     int w, h;
     int moved_x=0, moved_y=0;
@@ -80,6 +81,7 @@ class Camera{
             w_, h_
         );
         w = w_; h = h_;
+        bx = w/2;by=h/2;
         center_x = w/2;
         center_y = h/2;
         SDL_SetTextureBlendMode(cam_tex, SDL_BLENDMODE_BLEND);
@@ -134,6 +136,10 @@ class Camera{
 
     }
 
+    std::pair<int, int> get_real_cords(int x, int y){
+        return { (double)x / zoom + bx, (double)y / zoom + by  };
+    }
+
     void handle_command(float t, camera_operation& co){
 
         switch(co.type){
@@ -178,7 +184,7 @@ class Camera{
 
     void draw(SDL_Renderer* rend){
         finish_renderer(rend);
-        int bx = center_x - ((int)((double)w / zoom)/2), by = center_y - ((int)((double)h / zoom)/2);
+        bx = center_x - ((int)((double)w / zoom)/2); by = center_y - ((int)((double)h / zoom)/2);
         int bw = (int)((double)w / zoom), bh = (int)((double)h / zoom);
 
         if (bx < 0) bx =0;

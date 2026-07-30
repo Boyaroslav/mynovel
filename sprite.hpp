@@ -15,7 +15,7 @@
  */
 
 
-#pragma once
+
 #include "utils.hpp"
 
 struct sprite_texture {

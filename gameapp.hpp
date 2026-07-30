@@ -16,7 +16,7 @@
 
 
 #pragma once
-#include "screen.hpp"
+
 #include "menus.hpp"
 
 
@@ -878,8 +878,10 @@ void Screen::handleMouseEvent(const SDL_Event &e)
             px = e.button.x;
             py = e.button.y;
 
+
             if (e.button.button == SDL_BUTTON_LEFT)
             {
+
                 interface->handle_click(px, py);
                 if (if_its_game){
                 textbox->check_press(px, py);

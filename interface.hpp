@@ -16,8 +16,6 @@
 
 
 
-#pragma once
-#include "utils.hpp"
 #include "font.hpp"
 
 extern Font main_font;

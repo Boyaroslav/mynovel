@@ -17,9 +17,7 @@
 
 
 #include "utils.hpp"
-#include "event_types.hpp"
 #include "scene.hpp"
-#include "event.hpp"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>

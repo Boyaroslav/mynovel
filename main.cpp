@@ -15,7 +15,6 @@
  */
 
 #include "gameapp.hpp"
-#include "scene.hpp"
 
 #ifdef _WIN32
 #undef main

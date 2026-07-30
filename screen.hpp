@@ -16,15 +16,11 @@
 
 
 
-#pragma once
 
-#include "utils.hpp"
 #include "loader.hpp"
 #include "textbox.cpp"
-#include "sprite.hpp"
 #include "gamemixer.hpp"
 #include "luaruntime.hpp"
-#include "interface.hpp"
 #include "camera.hpp"
 #include <setjmp.h>
 

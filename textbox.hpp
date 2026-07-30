@@ -15,8 +15,8 @@
  */
 
 
-#include "font.hpp"
 #include "sprite.hpp"
+#include "interface.hpp"
 
 Font main_font;
 
