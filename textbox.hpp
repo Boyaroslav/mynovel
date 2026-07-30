@@ -28,6 +28,18 @@ Font text_box_font;
 
 // я тут подумал, active words должны быть только у поседней смски, то есть меньше считать и все такое(не забудь удалять)
 
+struct baked_element{
+    SDL_Texture* tex = nullptr;
+    SDL_Rect dst;
+};
+
+
+struct rendered_aw{
+    SDL_Rect r;
+    std::string laction;
+
+};
+
 struct message{
     //uint8_t id=-1;
     std::string text;
@@ -35,7 +47,9 @@ struct message{
     std::chrono::steady_clock::time_point start_time;
     std::vector<active_words> aw;
     float chars_shown = 0.0f;
-    bool is_complete = false;
+    bool is_complete = false; // true - запекаем значит
+    baked_element be;
+    std::vector<rendered_aw> local_aws; // их же тоже удалять с сообщением
 
     message(std::string text,
             float speed,
@@ -44,13 +58,46 @@ struct message{
             float chars_shown = 0.0f,
             bool is_complete=false): 
             text(text), speed(speed), start_time(start_time), aw(aw), chars_shown(chars_shown), is_complete(is_complete) {}
+
+        ~message() {
+        if (be.tex) SDL_DestroyTexture(be.tex);
+    }
+
+    message(const message&) = delete;
+    message& operator=(const message&) = delete;
+
+
+    message(message&& other) noexcept
+        : text(std::move(other.text)),
+          speed(other.speed),
+          start_time(other.start_time),
+          aw(std::move(other.aw)),
+          chars_shown(other.chars_shown),
+          is_complete(other.is_complete),
+          be(other.be),
+          local_aws(std::move(other.local_aws))
+    {
+        other.be.tex = nullptr;
+    }
+
+    message& operator=(message&& other) noexcept
+    {
+        if (this != &other) {
+            if (be.tex) SDL_DestroyTexture(be.tex);
+            text = std::move(other.text);
+            speed = other.speed;
+            start_time = other.start_time;
+            aw = std::move(other.aw);
+            chars_shown = other.chars_shown;
+            is_complete = other.is_complete;
+            be = other.be;
+            local_aws = std::move(other.local_aws);
+            other.be.tex = nullptr;
+        }
+        return *this;
+    }
 };
 
-struct rendered_aw{
-    SDL_Rect r;
-    std::string laction;
-
-};
 
 struct textbox_button{
     rendered_aw rectact;
@@ -60,6 +107,7 @@ struct textbox_button{
 
 class TextBox{
     protected:
+        int max_width = 0;
         SDL_Color Outline_color;
         int step = 1;
         std::string footer;
@@ -72,6 +120,12 @@ class TextBox{
         int move_y = 0;
         int padding = 20;
         toml::table configuration;
+        bool stick_bottom=0;
+
+        int length_of_last_message = 0;
+        int length_of_last_elements = 0; // бля я чето не то делаю
+        int baked_line_count = 0;
+
 
         bool IS_TOML = false;
 
@@ -86,6 +140,10 @@ class TextBox{
         std::vector<message>messages; // [text angry slow] \n [text normal quick and so on]
         std::vector<rendered_aw>r_aws;
         std::chrono::steady_clock::time_point last_update;
+
+        std::vector<std::vector<text_line>> lines;
+
+        std::vector<baked_element> baked_lines;
     public:
         bool hidden = false;
         TextBox(){
@@ -93,7 +151,11 @@ class TextBox{
             input_header_size=0; IS_HOVERED=0;
             Outline_color =  to_sdlc(TEXTBOX_OUTLINE_COLOR);
         }
-        ~TextBox(){r_aws.clear(); messages.clear();}
+        ~TextBox(){
+            for(auto& i: baked_lines){
+                SDL_DestroyTexture(i.tex);
+            }
+            r_aws.clear(); messages.clear();}
         void addMessage(std::string);
         void cl();
         void cllast();
@@ -120,4 +182,11 @@ class TextBox{
         void load_toml(SDL_Renderer* r, std::string t);
         bool WAS_ACTION = false; // если на слово нажали чтоб не жмалось NEED_MORE_EVENTS
         int input_header_size;
+        void bake_lines();
+        void bake_line();
+        void clear_completed();
+        void bake_completed(SDL_Renderer* rend);
+
+        std::vector<std::vector<text_line>> split_message(message& msg);
+        std::vector<std::vector<text_line>> fit_lines(message &msg, int max_width);
 };

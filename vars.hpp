@@ -107,6 +107,7 @@ void vars_init()
     set_value("LETTER_SPEED", LETTER_SPEED);
     set_value("LD_SPEED", 0.4); // как быстро будет выплывать спрайт
     set_value("WINDOW_TITLE", std::string("my novel"));
+    set_value("TEXTBOX_HIDDEN", 0);
 }
 
 std::string interpolate(const std::string &text)

@@ -17,166 +17,202 @@
 #include "textbox.hpp"
 #include "vars.hpp"
 
-int check_aw(uint32_t i, message m){ // active - length; no - -1
-    for (auto aw: m.aw){
-        if (i >= aw.start && i <= aw.end){
-            return aw.end - i;
+int check_aw(uint32_t i, const message& m) // возвращает индекс в msg.aw
+{
+    int l = 0;
+    int r = m.aw.size() - 1;
+
+    while (l <= r)
+    {
+        int mid = l + (r - l) / 2;
+        const auto& aw = m.aw[mid];
+
+        if (i < aw.start)
+            r = mid - 1;
+        else if (i > aw.end)
+            l = mid + 1;
+        else
+            return mid;
+    }
+
+    return -1;
+}
+
+
+std::vector<std::vector<text_line>> TextBox::split_message(message& msg)
+{
+    std::vector<std::vector<text_line>> result;
+
+    std::string visible_text = msg.is_complete
+        ? msg.text
+        : utf8_substr(msg.text, 0, (size_t)msg.chars_shown);
+
+    if (visible_text.empty())
+        return result;
+
+    std::vector<text_line> current_line;
+    std::string word;
+
+    size_t total_utf8_len = utf8_len(visible_text);
+    for (size_t i = 0; i < total_utf8_len; ++i)
+    {
+        std::string c = utf8_substr(visible_text, i, 1);
+
+        if (c != " ")
+        {
+            word += c;
+            continue;
+        }
+
+        if (text_box_font.measure(current_line, word).x > max_width)
+        {
+            result.push_back(current_line);
+            current_line.clear();
+        }
+
+        int aw_idx = check_aw(i - utf8_len(word), msg);
+        current_line.push_back(aw_idx >= 0
+            ? text_line(ActiveWord{msg.aw[aw_idx], word + " "})
+            : text_line(word + " "));
+
+        word.clear();
+    }
+
+    if (!word.empty() || !current_line.empty())
+    {
+        if (text_box_font.measure(current_line, word).x > max_width)
+        {
+            result.push_back(current_line);
+            result.push_back({ word });
+        }
+        else
+        {
+            current_line.push_back(word);
+            result.push_back(current_line);
         }
     }
-    return -1;
-} // я это буду использовать чтобы проверять слово на активность
 
+    return result;
+}
 
 
 void TextBox::draw(SDL_Renderer *rend)
 {
-    if(hidden) return;
+    if (hidden) return;
     if (!rend) return;
 
-    
-    SDL_RenderSetClipRect(rend, IS_TOML?  &tb_border : &border);
+    SDL_RenderSetClipRect(rend, IS_TOML ? &tb_border : &border);
     if (IS_SPRITE) tb_sprite.draw(rend);
 
     if (draw_frame){
-    SDL_SetRenderDrawColor(rend, box_color.r, box_color.g, box_color.b, box_color.a);
-    SDL_RenderFillRect(rend, &border);
+        SDL_SetRenderDrawColor(rend, box_color.r, box_color.g, box_color.b, box_color.a);
+        SDL_RenderFillRect(rend, &border);
     }
 
     r_aws.clear();
-    int max_width = border.w - padding * 2;
-    std::vector<std::vector<text_line>> lines;
-
-    for (auto &msg : messages)
-    {
-        std::string visible_text = utf8_substr(msg.text, 0, (size_t)msg.chars_shown);
-        if (visible_text.empty())
-            continue;
-
-        std::vector<text_line> current_line;
-        std::string word = "";
-
-        size_t total_utf8_len = utf8_len(visible_text);
-        for (size_t i = 0; i < total_utf8_len; ++i)
-        {
-            std::string c = utf8_substr(visible_text, i, 1);
-
-            if (c == " ")
-            {
-                if (text_box_font.measure(current_line, word).x > max_width)
-                {
-                    lines.push_back(current_line);
-                    current_line.clear();
-                }
-
-                int aw_idx = check_aw(i - utf8_len(word), msg);
-                if (aw_idx >= 0) {
-                    for (auto &a : msg.aw) {
-                        if ((i - utf8_len(word)) >= a.start && (i - utf8_len(word)) <= a.end) {
-                            current_line.push_back(ActiveWord{a, word + " "});
-                            break;
-                        }
-                    }
-                } else {
-                    current_line.push_back(word + " ");
-                }
-                word = "";
-            }
-            else
-            {
-                word += c;
-            }
-        }
-
-        if (!word.empty() || !current_line.empty())
-        {
-            if (text_box_font.measure(current_line, word).x > max_width)
-            {
-                lines.push_back(current_line);
-                lines.push_back({ word });
-            }
-            else
-            {
-                current_line.push_back(word);
-                lines.push_back(current_line);
-            }
-        }
-    }
-
-    // высота строки
+    max_width   = border.w - padding * 2;
     line_height = text_box_font.measure("A").y + 6;
 
-    // если строк слишком много — оставляем только последние (как в чате)
-    if (((int)lines.size() > max_lines) && REMOVE_LINES)
-    {
-        lines.erase(lines.begin(), lines.end() - max_lines);
-    }
-
-    // стартовый Y — всегда фиксированный
-    int y = border.y + padding;
     int x = border.x + padding;
 
+    // готовим ещё не запечённое (печатающееся) последнее сообщение
+    std::vector<std::vector<text_line>> current_lines;
+    if (!messages.empty() && !messages.back().is_complete)
+        current_lines = split_message(messages.back());
+
+    // считаем полную высоту контента для скролла
+    int total_height = 0;
+    for (auto& msg : messages)
+        if (msg.is_complete && msg.be.tex)
+            total_height += msg.be.dst.h;
+    total_height += (int)current_lines.size() * line_height;
+
     int visible_height = border.h - padding * 2;
-    int total_height = lines.size() * line_height;
     int max_scroll = max(0, total_height - visible_height);
-    if (target_scroll_y > max_scroll)
-        target_scroll_y = max_scroll;
-    if (target_scroll_y < 0)
-        target_scroll_y = 0;
+    if (target_scroll_y > max_scroll) target_scroll_y = max_scroll;
+    if (target_scroll_y < 0) target_scroll_y = 0;
 
+    if (stick_bottom){
+        target_scroll_y=max(0, total_height - visible_height);
+    }
 
-    // рендерим строки
     SDL_RenderSetClipRect(rend, &border);
-    for (auto &line : lines)
+
+    int y = border.y + padding - (int)target_scroll_y;
+
+    // рисуем уже запечённые сообщения одной текстурой каждое
+    for (auto& msg : messages)
+    {
+        if (!msg.is_complete || !msg.be.tex) continue;
+
+        SDL_Rect dst{ x, y, msg.be.dst.w, msg.be.dst.h };
+        SDL_RenderCopy(rend, msg.be.tex, nullptr, &dst);
+
+        for (auto& la : msg.local_aws)
+        {
+            SDL_Rect r = la.r;
+            r.x += x;
+            r.y += y;
+            r_aws.push_back({ r, la.laction });
+        }
+
+        y += dst.h;
+    }
+
+    // рисуем печатающееся сообщение как раньше — по частям
+    for (auto& line : current_lines)
     {
         int cur_x = x;
-        for (auto &part: line){
-            if (std::holds_alternative<std::string>(part)){
-                const std::string &text = std::get<std::string>(part);
+        for (auto& part : line)
+        {
+            if (std::holds_alternative<std::string>(part))
+            {
+                const std::string& text = std::get<std::string>(part);
                 if (text.empty()) continue;
 
-                SDL_Texture *tex = text_box_font.renderOutlined(rend, text,
+                SDL_Texture* tex = text_box_font.renderOutlined(rend, text,
                     DEFAULT_FONT_COLOR, DEFAULT_FONT_BORDER_COLOR);
                 if (!tex) continue;
 
                 SDL_Point sz = text_box_font.measure(text);
-                SDL_Rect dst{cur_x, y -(int)target_scroll_y, sz.x, sz.y};
+                SDL_Rect dst{cur_x, y, sz.x, sz.y};
                 SDL_RenderCopy(rend, tex, nullptr, &dst);
                 SDL_DestroyTexture(tex);
 
                 cur_x += sz.x;
             }
-            else{ // active word
-            const ActiveWord &aw = std::get<ActiveWord>(part);
-            if (aw.text.empty()) continue;
 
-            SDL_Texture *tex = text_box_font.renderOutlinedUnderlineBold(rend, aw.text,
-                ACTIVE_FONT_COLOR, DEFAULT_ACTIVE_FONT_BORDER_COLOR);
-            if (!tex) continue;
+            else
+            {
+                const ActiveWord& aw = std::get<ActiveWord>(part);
+                if (aw.text.empty()) continue;
 
-            SDL_Point sz = text_box_font.measure(aw.text);
-            SDL_Rect dst{cur_x, y - (int)target_scroll_y, sz.x, sz.y};
-            SDL_RenderCopy(rend, tex, nullptr, &dst);
-            SDL_DestroyTexture(tex);
+                SDL_Texture* tex = text_box_font.renderOutlinedUnderlineBold(rend, aw.text,
+                    ACTIVE_FONT_COLOR, DEFAULT_ACTIVE_FONT_BORDER_COLOR);
+                if (!tex) continue;
 
-            r_aws.push_back({dst, aw.aw.lua_action});
+                SDL_Point sz = text_box_font.measure(aw.text);
+                SDL_Rect dst{cur_x, y, sz.x, sz.y};
+                SDL_RenderCopy(rend, tex, nullptr, &dst);
+                SDL_DestroyTexture(tex);
 
-            cur_x += sz.x;
-
+                r_aws.push_back({ dst, aw.aw.lua_action });
+                cur_x += sz.x;
             }
+        }
+        y += line_height;
     }
-    y += line_height;
-    }
+
     SDL_RenderSetClipRect(rend, nullptr);
     if (IS_HOVERED && draw_frame) {
-        
         SDL_SetRenderDrawColor(rend, Outline_color.r, Outline_color.g, Outline_color.b, Outline_color.a);
         SDL_RenderDrawRect(rend, &border);
 
         SDL_Rect thick_border = {border.x + 1, border.y + 1, border.w - 2, border.h - 2};
         SDL_RenderDrawRect(rend, &thick_border);
     }
-
 }
+
 
 void TextBox::set_footer(std::string t)
 {
@@ -230,6 +266,7 @@ void TextBox::refresh_last()
 
 void TextBox::handle_mouse_wheel(SDL_Event e){
     if (hidden) return;
+    stick_bottom = 0;
     int start_x = 0;
     int start_y = 0;
     if (e.type == SDL_FINGERMOTION){
@@ -253,6 +290,7 @@ void TextBox::handle_mouse_wheel(SDL_Event e){
 
 void TextBox::addMessage(std::string text)
 {
+    length_of_last_message = 0;
     target_scroll_y = 999999;
     //log("I have new message! " + text);
     text = interpolate(text);
@@ -260,6 +298,7 @@ void TextBox::addMessage(std::string text)
         done_messages();
     auto [aw, t] = TextBox::parse_active_words(text);
     messages.emplace_back(t, 1.0 * get_value("LETTER_SPEED").as_float(), std::chrono::steady_clock::now(), aw, 0);
+    stick_bottom=1;
 
 
 }
@@ -280,6 +319,19 @@ void TextBox::is_hovered(int px, int py){
         if (py > border.y && py < border.y + border.h){
             IS_HOVERED = 1;
         }
+    }
+}
+
+void TextBox::clear_completed(){
+    for(auto it = messages.begin(); it != messages.end();){
+        auto &msg = *it;
+        if (msg.is_complete){
+            messages.erase(it);
+            continue;
+        }
+
+
+        it++;
     }
 }
 
@@ -362,10 +414,12 @@ void TextBox::check_press(int px, int py){
 
 void TextBox::show(){
     hidden = 0;
+    set_value("TEXTBOX_HIDDEN", 0);
 }
 
 void TextBox::hide(){
     hidden = 1;
+    set_value("TEXTBOX_HIDDEN", 1);
 }
 
 
@@ -484,4 +538,82 @@ void TextBox::load_toml(SDL_Renderer* rend, std::string t){
     std::string f = configuration["textarea"]["font"].value_or<std::string>(DEFAULT_FONT);
     text_box_font.load(f.c_str());
 
+}
+
+void TextBox::bake_completed(SDL_Renderer* rend)
+{
+    if (!rend) return;
+
+    for (auto& msg : messages)
+    {
+        if (!msg.is_complete) continue;
+        if (msg.be.tex != nullptr) continue;
+
+        auto msg_lines = split_message(msg);
+        if (msg_lines.empty()) continue;
+
+        int tex_w = max_width;
+        int tex_h = (int)msg_lines.size() * line_height;
+        if (tex_w <= 0 || tex_h <= 0) continue;
+
+        SDL_Texture* target = SDL_CreateTexture(rend, SDL_PIXELFORMAT_RGBA8888,
+            SDL_TEXTUREACCESS_TARGET, tex_w, tex_h);
+        if (!target) continue;
+
+        SDL_SetTextureBlendMode(target, SDL_BLENDMODE_BLEND);
+
+        SDL_Texture* prev_target = SDL_GetRenderTarget(rend);
+        SDL_SetRenderTarget(rend, target);
+        SDL_SetRenderDrawColor(rend, 0, 0, 0, 0);
+        SDL_RenderClear(rend);
+
+        int y = 0;
+        for (auto& line : msg_lines)
+        {
+            int cur_x = 0;
+            for (auto& part : line)
+            {
+                if (std::holds_alternative<std::string>(part))
+                {
+                    const std::string& text = std::get<std::string>(part);
+                    if (text.empty()) continue;
+
+                    SDL_Texture* part_tex = text_box_font.renderOutlined(rend, text,
+                        DEFAULT_FONT_COLOR, DEFAULT_FONT_BORDER_COLOR);
+                    if (!part_tex) continue;
+
+                    SDL_Point sz = text_box_font.measure(text);
+                    SDL_Rect dst{cur_x, y, sz.x, sz.y};
+                    SDL_RenderCopy(rend, part_tex, nullptr, &dst);
+                    SDL_DestroyTexture(part_tex);
+
+                    cur_x += sz.x;
+                }
+                else
+                {
+                    const ActiveWord& aw = std::get<ActiveWord>(part);
+                    if (aw.text.empty()) continue;
+
+                    SDL_Texture* part_tex = text_box_font.renderOutlinedUnderlineBold(rend, aw.text,
+                        ACTIVE_FONT_COLOR, DEFAULT_ACTIVE_FONT_BORDER_COLOR);
+                    if (!part_tex) continue;
+
+                    SDL_Point sz = text_box_font.measure(aw.text);
+                    SDL_Rect dst{cur_x, y, sz.x, sz.y};
+                    SDL_RenderCopy(rend, part_tex, nullptr, &dst);
+                    SDL_DestroyTexture(part_tex);
+
+                    msg.local_aws.push_back({dst, aw.aw.lua_action});
+
+                    cur_x += sz.x;
+                }
+            }
+            y += line_height;
+        }
+
+        SDL_SetRenderTarget(rend, prev_target);
+
+        msg.be.tex = target;
+        msg.be.dst = SDL_Rect{ 0, 0, tex_w, tex_h }; 
+    }
 }

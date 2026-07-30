@@ -913,7 +913,7 @@ void Screen::handleMouseEvent(const SDL_Event &e)
 
 void Screen::run(abool &run)
 {
-        camera->set_renderer(renderer);
+        
         last_time = SDL_GetTicks();
         textbox->update_position(width, height);
         //nextEvent();
@@ -1069,10 +1069,14 @@ void Screen::update_and_render()
                 }
             }
         }
+        textbox->bake_completed(renderer);
+
+        camera->set_renderer(renderer);
 
         textbox->update(delta_time);
         bg.update(delta_time);
         camera->update(delta_time);
+
 
         SDL_RenderClear(renderer);
         bg.draw(renderer);
@@ -1083,6 +1087,7 @@ void Screen::update_and_render()
         textbox->draw(renderer);
         interface->draw(renderer, px, py);
         camera->draw(renderer);
+        camera->finish_renderer(renderer);
         SDL_RenderPresent(renderer);
 }
 
