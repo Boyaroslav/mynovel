@@ -24,6 +24,8 @@ class Button{
     private:
     SDL_Rect cords;
     std::string text="";
+    SDL_Texture* tex = nullptr;
+    SDL_Texture* collidetex = nullptr; // если кнопка сложной формы
     std::function<void()> event;
     public:
 
@@ -31,6 +33,10 @@ class Button{
         event = e;
         cords = c;
         text = l;
+    }
+
+    Button(){
+        
     }
 
     bool check_hovered(int mx, int my, int x, int y){

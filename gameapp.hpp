@@ -95,7 +95,7 @@ bool Screen::init_()
         SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
 
 
-        SDL_RenderSetLogicalSize(renderer, width, height);
+        //SDL_RenderSetLogicalSize(renderer, width, height);
         vars_init();
 
         main_font = Font();
