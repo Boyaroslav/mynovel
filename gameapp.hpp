@@ -57,6 +57,8 @@ bool Screen::init_()
         if (SDL_GetCurrentDisplayMode(0, &dm) == 0) {
             real_width = dm.w;
             real_height = dm.h;
+            width = real_width;
+            height = real_height; 
             LOGI("Android display mode: %dx%d", width, height);
         } else {
             LOGE("SDL_GetCurrentDisplayMode failed: %s", SDL_GetError());
@@ -1011,8 +1013,8 @@ void Screen::run(abool &run)
                     textbox->handle_mouse_wheel(e);
                 }
                 else if (e.type == SDL_MOUSEMOTION){
-                    px = e.motion.x;
-                    py = e.motion.y;
+                    auto [px, py] = camera->get_real_cords(e.motion.x, e.motion.y);
+
                 }
             }
             if(textbox->WAS_ACTION){
