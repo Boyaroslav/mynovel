@@ -23,6 +23,9 @@
 class Audio
 {
 private:
+
+    uint32_t current_music_hash = 0;
+
     Mix_Music *current_music = nullptr; // та что прям вот щас играет
 
     int fade_in = 0;
@@ -33,6 +36,9 @@ private:
 
     int bgm_volume = MIX_MAX_VOLUME; // max - 128
     int sfx_volume = MIX_MAX_VOLUME; // same
+
+    Uint32 music_started_at = 0;
+    double music_position_offset = 0.0;
 
     std::unordered_map<uint32_t, Mix_Chunk *> chunks; // кэш чанков
     std::unordered_map<uint32_t, int> channel;        // что играет (хэш) - на каком канале
@@ -71,14 +77,50 @@ public:
         return chunk;
     }
 
-    Mix_Music *load_resource_music(const char *path)
-    {
+    double get_music_position(){
+        double pos = Mix_GetMusicPosition(current_music);
+
+        return pos;
+        
+
+
+    }
+
+    void reset(){
+        if (current_music){
+            Mix_HaltMusic();
+            Mix_FreeMusic(current_music);
+            current_music = nullptr;
+        }
+        current_music_hash = 0;
+        music_started_at = 0;
+        music_position_offset = 0.0;
+
+        Mix_HaltChannel(-1);
+
+        for (auto &i : chunks)
+            Mix_FreeChunk(i.second);
+        chunks.clear();
+
+        channel.clear();
+        fade_in = fade_out = sfx_fade_in = sfx_fade_out = 0;
+        bgm_volume = sfx_volume = MIX_MAX_VOLUME;
+    }
+
+    Mix_Music *load_resource_music(const char* path){
         uint32_t hash = fnv1a_32(path);
+        current_music_hash = hash;
+        return load_resource_music_by_hash(current_music_hash);
+    }
+
+
+    Mix_Music *load_resource_music_by_hash(uint32_t hash)
+    {
 
         auto it = ccnvl_resources.find(hash);
         if (it == ccnvl_resources.end())
         {
-            log("CCNVL resource not found: " + std::string(path));
+            log("CCNVL resource not found: ");
             return nullptr;
         }
 
@@ -90,7 +132,7 @@ public:
         Mix_Music *mus = Mix_LoadMUS_RW(rw, 1);
         if (!mus)
         {
-            log("Failed to load music from CCNVL: " + std::string(path));
+            log("Failed to load music from CCNVL: ");
             return nullptr;
         }
 
@@ -195,5 +237,64 @@ public:
 
         sfx_volume = (int)(((double)MIX_MAX_VOLUME / 100.0) * (double)v);
         Mix_Volume(-1, sfx_volume);
+    }
+
+void write_yourself(FILE* save_file)
+    {
+        int ints[6] = { fade_in, fade_out, sfx_fade_in, sfx_fade_out, bgm_volume, sfx_volume };
+        fwrite(ints, sizeof(int), 6, save_file);
+
+        fwrite(&current_music_hash, sizeof(uint32_t), 1, save_file);
+
+        double position = current_music_hash ? get_music_position() : 0.0;
+        fwrite(&position, sizeof(double), 1, save_file);
+    }
+
+    void read_yourself(FILE* save_file)
+    {
+        int ints[6];
+        fread(ints, sizeof(int), 6, save_file);
+        fade_in      = ints[0];
+        fade_out     = ints[1];
+        sfx_fade_in  = ints[2];
+        sfx_fade_out = ints[3];
+        bgm_volume   = ints[4];
+        sfx_volume   = ints[5];
+
+        uint32_t hash = 0;
+        double position = 0.0;
+        fread(&hash, sizeof(uint32_t), 1, save_file);
+        fread(&position, sizeof(double), 1, save_file);
+
+        if (current_music)
+        {
+            Mix_HaltMusic();
+            Mix_FreeMusic(current_music);
+            current_music = nullptr;
+        }
+
+        current_music_hash = hash;
+        Mix_VolumeMusic(bgm_volume);
+
+        if (hash != 0)
+        {
+            current_music = load_resource_music_by_hash(hash);
+            if (current_music)
+            {
+                // играем без fade - это восстановление сейва, а не сценарный переход
+                Mix_PlayMusic(current_music, -1);
+
+                if (Mix_SetMusicPosition(position) == -1)
+                {
+                    // формат не поддерживает seek (например, некоторые MOD/MIDI) -
+                    // тогда просто начинаем сначала
+                    log("Mix_SetMusicPosition failed, starting from 0: " + std::string(Mix_GetError()));
+                    position = 0.0;
+                }
+
+                music_started_at = SDL_GetTicks();
+                music_position_offset = position;
+            }
+        }
     }
 };

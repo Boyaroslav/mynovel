@@ -53,11 +53,12 @@ const char* save_path = "";
 
 const int REMOVE_LINES = 0; // remove lines when the number reaches max_lines
 
-float LETTER_SPEED = 3.0;
+float LETTER_SPEED = 0.02;
 
 int text_box_scroll_step = 8;
 
 int INVERSED_SCROLL = 1;
+
 
 #ifdef FORCE_CHARS_SHOWN_FLUENCY
 float MAX_CHARS_SPEED = 1;
@@ -399,3 +400,15 @@ static FILE* lcnovel_open_mem_stream(mem_buffer* mb) {
 }
 
 #endif
+
+
+bool if_pixel(SDL_Surface* surf, int x, int y){ // проверяю прозрачный ли пуксель
+    int bpp = surf->format->BytesPerPixel;
+    Uint8* pix = (Uint8*)surf->pixels + x * bpp + (surf->pitch * y);
+    Uint32 puxel = 0;
+    Uint8 r, g, b, a;
+    memcpy(&puxel, pix, bpp);
+    
+    SDL_GetRGBA(puxel, surf->format, &r, &g, &b, &a);
+    return (a == 0) || (r + g + b == 0);
+}

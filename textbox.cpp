@@ -298,6 +298,7 @@ void TextBox::addMessage(std::string text)
         done_messages();
     auto [aw, t] = TextBox::parse_active_words(text);
     messages.emplace_back(t, 1.0 * get_value("LETTER_SPEED").as_float(), std::chrono::steady_clock::now(), aw, 0);
+    std::cout<<messages.back().speed<<"\n";
     stick_bottom=1;
 
 
@@ -507,7 +508,7 @@ void TextBox::read_yourself(FILE* ptr){
 void TextBox::load_toml(SDL_Renderer* rend, std::string t){
     configuration = read_toml("textbox.toml");
 
-    std::string f = configuration["textarea"]["font"].value_or<std::string>(DEFAULT_FONT);
+    std::string f = configuration["textarea"]["font"].value_or<std::string>(""); // если пустой то он сам найдет шрифт в .load
     text_box_font.load(f.c_str());
 
     if (configuration.empty()) return;

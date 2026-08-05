@@ -111,6 +111,7 @@ bool Screen::init_()
 
         textbox = std::make_unique<TextBox>();
         camera = std::make_unique<Camera>();
+        audio = std::make_unique<Audio>();
         camera->init(renderer, width, height);
         if (if_its_game == 0){
             textbox->hide();
@@ -204,6 +205,7 @@ void Screen::start_game(){
             interface = make_pause_menu(width, height, this);
             interface->hide();
             set_if_its_game(1);
+            audio->reset();
             IS_CCNVL = 0;
             epos = 0;
             apos = 0;
@@ -235,6 +237,7 @@ void Screen::main_menu(){
             load_("script.bin");
             textbox->move_position(0,0);
             textbox->hide();
+            audio->reset();
             change_scene("menu");
             interface = make_main_menu(width, height, this);
             interface->show();
@@ -722,26 +725,26 @@ void Screen::handleEvent(bool isnext_needed)
         {
             if (apool[current_event->args_offset].type == ARG_INT)
             {
-                audio.play_music("0");
+                audio->play_music("0");
             }
             else
             {
                 const char *file = get_from_spool(apool[current_event->args_offset].value);
-                audio.play_music(interpolate(std::string(file)).c_str());
+                audio->play_music(interpolate(std::string(file)).c_str());
             }
         }
         break;
         case 24: // SOUND
         {
             const char *file = get_from_spool(apool[current_event->args_offset].value);
-            audio.play_audio(interpolate(std::string(file)).c_str());
+            audio->play_audio(interpolate(std::string(file)).c_str());
 
         }
         break;
         case 25: // BOMFADEIN
         {
             int t = apool[current_event->args_offset].value;
-            audio.fade_in_music(t);
+            audio->fade_in_music(t);
         }
         break;
         case 26: // LUA_IMPORT
@@ -774,25 +777,25 @@ void Screen::handleEvent(bool isnext_needed)
         break;
         case 28: // BPMVOL
         {
-            audio.set_music_volume(apool[current_event->args_offset].value);
+            audio->set_music_volume(apool[current_event->args_offset].value);
         }
         break;
         case 29: // SOUNDVOL
         {
             const char *file = get_from_spool(apool[current_event->args_offset].value);
-            audio.play_audio(interpolate(std::string(file)).c_str(), 0, apool[current_event->args_offset + 1].value);
+            audio->play_audio(interpolate(std::string(file)).c_str(), 0, apool[current_event->args_offset + 1].value);
         }
         break;
         case 33: // BPMFADEOUT
         {
             int t = apool[current_event->args_offset].value;
-            audio.fade_out_music(t);
+            audio->fade_out_music(t);
         }
         break;
         case 34: // TALK
         {
             const char *file = get_from_spool(apool[current_event->args_offset].value);
-            audio.play_audio(interpolate(std::string(file)).c_str(), 1);
+            audio->play_audio(interpolate(std::string(file)).c_str(), 1);
 
         }
         break;
@@ -1244,6 +1247,8 @@ void Screen::qload(){
 
     textbox->read_yourself(save_file);
 
+    audio->read_yourself(save_file);
+
 }
 
 
@@ -1290,5 +1295,7 @@ void Screen::write_states(FILE *save_file){
     }
 
     textbox->write_yourself(save_file);
+
+    audio->write_yourself(save_file);
 
 }

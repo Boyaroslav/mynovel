@@ -36,7 +36,6 @@ private:
     std::unique_ptr<Menu> interface;
     std::unique_ptr<Camera> camera;
     bool if_result = 1;
-    Audio audio;
 
     bool if_its_game = 1; // если это типо главное меню а не игра чтоб ESC не прожимался и тд
 
@@ -68,6 +67,7 @@ private:
 public:
     std::string file_name;
     std::unique_ptr<TextBox> textbox;
+    std::unique_ptr<Audio> audio;
     SDL_Event e{};
     bool WAS_MOTION = false;
 
