@@ -465,7 +465,7 @@ void Screen::handleEvent(bool isnext_needed)
             const char *sprite_name = get_from_spool(apool[current_event->args_offset + 1].value);
 
             sprites[index].load_texture(renderer, sprite_name);
-            sprites[index].set_texture_change_speed(1);
+            sprites[index].set_texture_change_speed(get_value("LD_SPEED"));
             sprites[index].start_transition(sprites[index].get_last());
         }
         }
@@ -519,7 +519,14 @@ void Screen::handleEvent(bool isnext_needed)
             int id = apool[current_event->args_offset].value;
             int x = apool[current_event->args_offset + 1].value;
             int y = apool[current_event->args_offset + 2].value;
-            int t = apool[current_event->args_offset + 3].value;
+            float t;
+            if (apool[current_event->args_offset + 3].type == ARG_DOUBLE){
+            uint32_t i_will_fix_it = apool[current_event->args_offset + 3].value;
+            memcpy(&t, &i_will_fix_it, sizeof(float));
+            }
+            else{
+                t = apool[current_event->args_offset + 3].value;
+            }
             std::cout << "[MV] x=" << x << " y=" << y << " t=" << t << "\n";
             // t это время за которое надо переместить - todo
             sprites[id].move(x, y, t);

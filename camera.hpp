@@ -139,7 +139,10 @@ class Camera{
     }
 
     std::pair<int, int> get_real_cords(int x, int y){
-        return { (double)x / zoom + bx, (double)y / zoom + by  };
+        return {
+            bx + (int)((double)x * w / (double)real_width / zoom),
+            by + (int)((double)y * h / (double)real_height / zoom)
+        };
     }
 
     void handle_command(float t, camera_operation& co){
@@ -202,7 +205,7 @@ class Camera{
 
 
         SDL_Rect target{
-            0, 0, w, h
+            0, 0, real_width, real_height
         };
 
 

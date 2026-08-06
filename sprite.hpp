@@ -35,7 +35,7 @@ private:
     std::vector<sprite_texture> textures;
     std::vector<uint32_t> texture_hashes;
     SDL_Rect rect = {0,0,0,0};
-    int x = 0, y=0;
+    double x = 0.0, y=0.0;
     int texture_size_w, texture_size_h;
     float angle = 0;
     int current_index = 0;
@@ -49,10 +49,10 @@ private:
     float scale_transition = 0.0f;
     float rotate_transition = 0.0f;
 
-    int sx; //start x y (before transition started)
-    int sy;
-    int tx; // target x y
-    int ty;
+    double sx; //start x y (before transition started)
+    double sy;
+    double tx; // target x y
+    double ty;
 
     int texture_change_percent = 100;
 
@@ -312,8 +312,8 @@ public:
     }
 
     SDL_Rect placed_rect(SDL_Rect r) const{
-        r.x += x;
-        r.y += y;
+        r.x += std::round(x);
+        r.y += std::round(y);
         return r; 
     }
     Sprite(const Sprite&) = delete;
@@ -362,8 +362,8 @@ void write_yourself(FILE *ptr){ // пишет про себя все в файл
         fwrite(texture_hashes.data(), sizeof(uint32_t), tex_count, ptr);
 
     fwrite(&rect, sizeof(SDL_Rect), 1, ptr);
-    fwrite(&x, sizeof(int), 1, ptr);
-    fwrite(&y, sizeof(int), 1, ptr);
+    fwrite(&x, sizeof(double), 1, ptr);
+    fwrite(&y, sizeof(double), 1, ptr);
     fwrite(&angle, sizeof(float), 1, ptr);
 
     fwrite(&current_index, sizeof(int), 1, ptr);
@@ -376,10 +376,10 @@ void write_yourself(FILE *ptr){ // пишет про себя все в файл
     fwrite(&move_speed, sizeof(float), 1, ptr);
     fwrite(&move_transition, sizeof(float), 1, ptr);
     fwrite(&hide_transition, sizeof(float), 1, ptr);
-    fwrite(&sx, sizeof(int), 1, ptr);
-    fwrite(&sy, sizeof(int), 1, ptr);
-    fwrite(&tx, sizeof(int), 1, ptr);
-    fwrite(&ty, sizeof(int), 1, ptr);
+    fwrite(&sx, sizeof(double), 1, ptr);
+    fwrite(&sy, sizeof(double), 1, ptr);
+    fwrite(&tx, sizeof(double), 1, ptr);
+    fwrite(&ty, sizeof(double), 1, ptr);
 }
 
 void read_yourself(FILE *ptr, SDL_Renderer* rend){
@@ -393,8 +393,8 @@ void read_yourself(FILE *ptr, SDL_Renderer* rend){
         fread(texture_hashes.data(), sizeof(uint32_t), tex_count, ptr);
 
     fread(&rect, sizeof(SDL_Rect), 1, ptr);
-    fread(&x, sizeof(int), 1, ptr);
-    fread(&y, sizeof(int), 1, ptr);
+    fread(&x, sizeof(double), 1, ptr);
+    fread(&y, sizeof(double), 1, ptr);
     fread(&angle, sizeof(float), 1, ptr);
 
     fread(&current_index, sizeof(int), 1, ptr);
@@ -407,10 +407,10 @@ void read_yourself(FILE *ptr, SDL_Renderer* rend){
     fread(&move_speed, sizeof(float), 1, ptr);
     fread(&move_transition, sizeof(float), 1, ptr);
     fread(&hide_transition, sizeof(float), 1, ptr);
-    fread(&sx, sizeof(int), 1, ptr);
-    fread(&sy, sizeof(int), 1, ptr);
-    fread(&tx, sizeof(int), 1, ptr);
-    fread(&ty, sizeof(int), 1, ptr);
+    fread(&sx, sizeof(double), 1, ptr);
+    fread(&sy, sizeof(double), 1, ptr);
+    fread(&tx, sizeof(double), 1, ptr);
+    fread(&ty, sizeof(double), 1, ptr);
 
 
     for (uint32_t hash : texture_hashes) {

@@ -122,6 +122,8 @@ class TextBox{
         int move_y = 0;
         int padding = 20;
         toml::table configuration;
+        int screen_height=width;
+        int screen_width=height;
 
         baked_element baked_footer;
 
@@ -162,6 +164,10 @@ class TextBox{
             log("TextBox created"); hidden = false; IS_INPUT=0;
             input_header_size=0; IS_HOVERED=0;
             Outline_color =  to_sdlc(TEXTBOX_OUTLINE_COLOR);
+            if (TEXTBOX_ADJUST_TARGET){
+                screen_width = real_width;
+                screen_height = real_height;
+            }
         }
         ~TextBox(){
             for(auto& i: baked_lines){

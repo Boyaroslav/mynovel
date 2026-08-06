@@ -139,8 +139,15 @@ uint32_t fnv1a_32(const std::string &s)
 
 int real_width = 1024;
 int real_height = 600;
-int width = real_width;
-int height = real_height;
+int width = real_width;//1920;
+int height = real_height;//1080;
+
+
+
+
+bool TEXTBOX_ADJUST_TARGET = (real_width != width) || (real_height != height);
+bool INTERFACE_ADJUST_TARGET = TEXTBOX_ADJUST_TARGET;
+
 
 #define abool std::atomic<bool>
 
