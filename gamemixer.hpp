@@ -254,12 +254,12 @@ void write_yourself(FILE* save_file)
     {
         int ints[6];
         fread(ints, sizeof(int), 6, save_file);
-        fade_in      = ints[0];
-        fade_out     = ints[1];
-        sfx_fade_in  = ints[2];
+        fade_in = ints[0];
+        fade_out = ints[1];
+        sfx_fade_in = ints[2];
         sfx_fade_out = ints[3];
-        bgm_volume   = ints[4];
-        sfx_volume   = ints[5];
+        bgm_volume = ints[4];
+        sfx_volume = ints[5];
 
         uint32_t hash = 0;
         double position = 0.0;
@@ -281,13 +281,10 @@ void write_yourself(FILE* save_file)
             current_music = load_resource_music_by_hash(hash);
             if (current_music)
             {
-                // играем без fade - это восстановление сейва, а не сценарный переход
                 Mix_PlayMusic(current_music, -1);
 
                 if (Mix_SetMusicPosition(position) == -1)
                 {
-                    // формат не поддерживает seek (например, некоторые MOD/MIDI) -
-                    // тогда просто начинаем сначала
                     log("Mix_SetMusicPosition failed, starting from 0: " + std::string(Mix_GetError()));
                     position = 0.0;
                 }

@@ -102,7 +102,15 @@ void TextBox::draw(SDL_Renderer *rend)
     if (!rend) return;
 
     SDL_RenderSetClipRect(rend, IS_TOML ? &tb_border : &border);
-    if (IS_SPRITE) tb_sprite.draw(rend);
+    if (IS_SPRITE){
+        tb_sprite.draw(rend);
+        for(auto& b: interactives){
+            std::visit([&](auto& t){
+                t.draw(rend, tb_border.x, tb_border.y);
+            }, b);
+            
+        }
+    }
 
     if (draw_frame){
         SDL_SetRenderDrawColor(rend, box_color.r, box_color.g, box_color.b, box_color.a);
@@ -321,6 +329,11 @@ void TextBox::is_hovered(int px, int py){
             IS_HOVERED = 1;
         }
     }
+    for(auto& b: interactives){
+        std::visit([&](auto& t){
+            t.check_hovered(px, py, tb_border.x, tb_border.y);
+        }, b);
+    }
 }
 
 void TextBox::clear_completed(){
@@ -361,6 +374,11 @@ void TextBox::move_position(int x_, int y_){
     border.x += x_;
     border.y -= move_y;
     border.y += y_;
+    tb_border.x -= move_x;
+    tb_border.y -= move_y;
+    tb_border.x += x_;
+    tb_border.y += y_;
+    tb_sprite.move(x_ - move_x, y_ - move_y);
     move_x = x_;
     move_y = y_;
 }
@@ -409,8 +427,26 @@ void TextBox::check_press(int px, int py){
         if (SDL_PointInRect(&p, &r.r)) {
             WAS_ACTION = 1;
             LUA_ACTION_FROM_TEXTBOX = r.laction;
+            return;
         }
     }
+
+    for(auto& b : interactives){
+        std::visit([&](auto& t){
+            t.check_press(px, py, tb_border.x, tb_border.y);
+        }, b);
+    }
+}
+
+void TextBox::check_cosmetic_press(int px, int py){
+
+    for(auto& b : interactives){
+        
+        std::visit([&](auto& t){
+            t.check_cosmetic_press(px, py, tb_border.x, tb_border.y);
+        }, b);
+    }
+
 }
 
 void TextBox::show(){
@@ -507,6 +543,7 @@ void TextBox::read_yourself(FILE* ptr){
 
 void TextBox::load_toml(SDL_Renderer* rend, std::string t){
     configuration = read_toml("textbox.toml");
+    log("reading toml...");
 
     std::string f = configuration["textarea"]["font"].value_or<std::string>(""); // если пустой то он сам найдет шрифт в .load
     text_box_font.load(f.c_str());
@@ -540,6 +577,28 @@ void TextBox::load_toml(SDL_Renderer* rend, std::string t){
     IS_SPRITE = 1;
     }
     draw_frame = (bool)configuration["textbox"]["draw_frame"].value_or(0);
+    SDL_Rect cc;
+    auto bts =  configuration["textbox"]["button"].as_array();
+    
+    for(auto&& n : *bts){
+        auto& but = *n.as_table();
+        cc = SDL_Rect{
+            but["x"].value_or(0),
+            but["y"].value_or(0),
+            but["width"].value_or(0),
+            but["height"].value_or(0),
+
+        };
+        interactives.emplace_back(
+            std::move(Button{cc, run_lua_func, but["command"].value_or("")})
+        );
+        std::visit([&](auto& t){
+            t.make_me_image(rend, but["image"].value_or(""));
+            t.add_hov_prsd(rend, but["image_hover"].value_or(""), but["image_pressed"].value_or(""));
+        }, interactives.back());
+
+    }
+
 
 
 }

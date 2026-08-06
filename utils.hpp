@@ -402,7 +402,13 @@ static FILE* lcnovel_open_mem_stream(mem_buffer* mb) {
 #endif
 
 
-bool if_pixel(SDL_Surface* surf, int x, int y){ // проверяю прозрачный ли пуксель
+bool if_pixel(SDL_Surface* surf, int x, int y, int nw, int nh){ // проверяю прозрачный ли пуксель
+    if (x<0 || y < 0 || x >= nw || y >= nh) return 0;
+    x = ((double)x) * ((double)surf->w) / ((double)nw);
+    y = ((double)y) * ((double)surf->h) / ((double)nh);
+
+    if (x >= surf->w || y >= surf->h) return 0;
+
     int bpp = surf->format->BytesPerPixel;
     Uint8* pix = (Uint8*)surf->pixels + x * bpp + (surf->pitch * y);
     Uint32 puxel = 0;
@@ -410,5 +416,5 @@ bool if_pixel(SDL_Surface* surf, int x, int y){ // проверяю прозра
     memcpy(&puxel, pix, bpp);
     
     SDL_GetRGBA(puxel, surf->format, &r, &g, &b, &a);
-    return (a == 0) || (r + g + b == 0);
+    return !(a == 0) || !(r + g + b == 0);
 }

@@ -120,6 +120,11 @@ class TextBox{
         int move_y = 0;
         int padding = 20;
         toml::table configuration;
+
+
+        std::vector<MENU_THINGS> interactives;
+
+
         bool stick_bottom=0;
 
         int length_of_last_message = 0;
@@ -145,6 +150,7 @@ class TextBox{
 
         std::vector<baked_element> baked_lines;
     public:
+        std::function<void(std::string&)> run_lua_func;
         bool hidden = false;
         TextBox(){
             log("TextBox created"); hidden = false; IS_INPUT=0;
@@ -177,6 +183,7 @@ class TextBox{
         bool IS_HOVERED;
         void check_cursor(int, int);
         void check_press(int, int);
+        void check_cosmetic_press(int, int); // mousebuttondown to check if pressed
         void write_yourself(FILE* ptr);
         void read_yourself(FILE* ptr);
         void load_toml(SDL_Renderer* r, std::string t);

@@ -113,6 +113,8 @@ bool Screen::init_()
         camera = std::make_unique<Camera>();
         audio = std::make_unique<Audio>();
         camera->init(renderer, width, height);
+
+        textbox->run_lua_func = [&](std::string s){ lua_runtime.run_string(s);};
         if (if_its_game == 0){
             textbox->hide();
         }
@@ -872,7 +874,9 @@ void Screen::handleMouseEvent(const SDL_Event &e)
         {
             px = e.button.x;
             py = e.button.y;
+            textbox->check_cosmetic_press(px, py);
         }
+
 
         if (e.type == SDL_MOUSEBUTTONUP)
         {
@@ -915,6 +919,10 @@ void Screen::handleMouseEvent(const SDL_Event &e)
             else if (e.button.button == SDL_BUTTON_RIGHT)
             {
             }
+        }
+        if (e.type == SDL_MOUSEMOTION){
+            auto [px, py] = camera->get_real_cords(e.motion.x, e.motion.y);
+            textbox->is_hovered(px, py);
         }
 }
 
@@ -1061,7 +1069,7 @@ void Screen::update_and_render()
         float delta_time = (current_time - last_time) / 1000.0f;
         last_time = current_time;
         lua_runtime.handle_lua_coroutines(delta_time);
-        textbox->is_hovered(px, py);
+        //textbox->is_hovered(px, py);
 
         if (WAITING)
         {

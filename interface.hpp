@@ -22,12 +22,22 @@ extern Font main_font;
 
 class Button{
     private:
+    bool IMG = 0;
+    bool IHP = 0;
+    bool pressed = 0;
+    bool hovered = 0;
+    bool cosmetic_pressed=0;
     SDL_Rect cords;
-    std::string text="";
+    SDL_Rect src;
     SDL_Texture* tex = nullptr;
+    SDL_Texture* tex_pressed = nullptr;
+    SDL_Texture* tex_hovered = nullptr;
+    SDL_Surface* surf = nullptr; // она понадобится чтоб коллайдер смотреть
     SDL_Texture* collidetex = nullptr; // если кнопка сложной формы
     std::function<void()> event;
+    std::function<void(std::string&)> sevent; // хз как было бы лучше 
     public:
+    std::string text="";
 
     Button(SDL_Rect c, std::function<void()> e, std::string l=""){
         event = e;
@@ -35,20 +45,169 @@ class Button{
         text = l;
     }
 
+    Button(SDL_Rect c, std::function<void(std::string&)> e, std::string l){
+        sevent = e;
+        cords = c;
+        text = l;
+
+    }
+
     Button(){
         
     }
 
+    ~Button(){
+        SDL_FreeSurface(surf);
+        SDL_DestroyTexture(tex);
+        SDL_DestroyTexture(collidetex);
+
+    }
+
+    void make_me_image(SDL_Renderer* rend, const char* path){ // обязательно вызвать конструктор до этого
+
+        uint32_t hash = fnv1a_32(path);
+
+        auto it = ccnvl_resources.find(hash);
+        if (it == ccnvl_resources.end()){
+            log("Button: cannot load " + std::string(path));
+            return;
+        }
+        auto& res = it->second;
+
+        SDL_RWops* rw = SDL_RWFromMem(ccnvl_data + res.offset, res.size);
+
+        if (!rw) return;
+
+        surf = IMG_Load_RW(rw, 1);
+
+        if (!surf){
+            log("Button: surface not loading");
+            return;
+        }
+
+        tex = SDL_CreateTextureFromSurface(rend, surf);
+        SDL_SetTextureBlendMode(tex, SDL_BLENDMODE_BLEND);
+        SDL_QueryTexture(tex, NULL, NULL, &src.w, &src.h);
+        src.x = 0;
+        src.y = 0;
+
+
+        IMG = 1;
+
+
+    }
+
+    void add_hov_prsd(SDL_Renderer* rend, const char* hov, const char* prd){
+        if (hov){
+        uint32_t hash = fnv1a_32(hov);
+
+        auto it = ccnvl_resources.find(hash);
+        if (it == ccnvl_resources.end()){
+            log("Button: cannot load " + std::string(hov));
+            return;
+        }
+        auto& res = it->second;
+
+        SDL_RWops* rw = SDL_RWFromMem(ccnvl_data + res.offset, res.size);
+        auto _surf = IMG_Load_RW(rw, 1);
+
+        if (!_surf){
+            log("Button: surface not loading");
+            return;
+        }
+
+        tex_hovered = SDL_CreateTextureFromSurface(rend, _surf);
+        SDL_SetTextureBlendMode(tex_hovered, SDL_BLENDMODE_BLEND);
+        }
+
+        if (prd){
+
+        uint32_t hash = fnv1a_32(prd);
+        auto it = ccnvl_resources.find(hash);
+        if (it == ccnvl_resources.end()){
+            log("Button: cannot load " + std::string(prd));
+            return;
+        }
+        auto& res = it->second;
+        auto rw  = SDL_RWFromMem(ccnvl_data + res.offset, res.size);
+        auto _surf = IMG_Load_RW(rw, 1);
+        if (!_surf){
+            log("Button: surface not loading");
+            return;
+        }
+        tex_pressed = SDL_CreateTextureFromSurface(rend, _surf);
+        SDL_SetTextureBlendMode(tex_pressed, SDL_BLENDMODE_BLEND);
+        IHP = 1; // лан похуй
+        }
+
+    }
+
+    void give_me_collider(const char* collider){ // collider это типо коллизия
+
+    }
+
+    Button& operator=(const Button&) = delete;
+
+    Button& operator=(Button&&) noexcept = default;
+
+    Button(const Button& other){
+        cords = other.cords;
+        text = other.text;
+        event = other.event;
+        sevent = other.sevent;
+
+        // ресурсы не копируем
+        IMG = false;
+        tex = nullptr;
+        surf = nullptr;
+        collidetex = nullptr;
+    }
+
+    Button(Button&& other) noexcept{ // move
+        cords = other.cords;
+        text = std::move(other.text);
+        src = other.src;
+
+        tex = other.tex;
+        tex_hovered = other.tex_hovered;
+        tex_pressed = other.tex_pressed;
+        surf = other.surf;
+        collidetex = other.collidetex;
+        IMG = other.IMG;
+        IHP = other.IHP;
+
+        event = std::move(other.event);
+        sevent = std::move(other.sevent);
+
+        other.tex = nullptr;
+        other.surf = nullptr;
+        other.collidetex = nullptr;
+        other.tex_hovered = nullptr;
+        other.tex_pressed = nullptr;
+    }
+
     bool check_hovered(int mx, int my, int x, int y){
-        return mx >= cords.x+x
+    
+        hovered = IMG? if_pixel(surf, mx - x - cords.x, my - y - cords.y, cords.w, cords.h) : mx >= cords.x+x
             && mx <= cords.x+x+cords.w
             && my >= cords.y+y
             && my <= cords.y+y+cords.h;
+
+        return hovered;
 
     }
 
     void draw(SDL_Renderer *rend, int xx, int yy, bool is_hovered=false){
         SDL_Rect r = {cords.x+xx, cords.y+yy, cords.w, cords.h};
+
+        if (IMG){
+            if (IHP){
+                if (cosmetic_pressed){SDL_RenderCopy(rend, tex_pressed, nullptr, &r); return;}
+                if (hovered){SDL_RenderCopy(rend, tex_hovered, nullptr, &r); return;}
+            }
+            SDL_RenderCopy(rend, tex, nullptr, &r);
+            return;
+        }
 
         Color fill = is_hovered ? HOVERED_INTERFACE_FILL_COLOR : INTERFACE_FILL_COLOR;
         SDL_Color fc = to_sdlc(fill);
@@ -71,9 +230,14 @@ class Button{
             }
         }
     }
+    bool check_cosmetic_press(int mx, int my, int x, int y){
+        cosmetic_pressed = check_hovered(mx, my, x, y);
+        return pressed;
+    }
 
     bool check_press(int mx, int my, int x, int y){
-        bool pressed = check_hovered(mx, my, x, y);
+        cosmetic_pressed =0;
+        pressed = check_hovered(mx, my, x, y);
 
         if(pressed) action();
 
@@ -81,7 +245,7 @@ class Button{
     }
 
     void action(){
-        event();
+        event? event() :  sevent(text);
     }
 
 };
@@ -101,6 +265,8 @@ class Menu{
     Menu(int x, int y, int w, int h, std::initializer_list<MENU_THINGS> items = {})
      : x(x), y(y), w(w), h(h), things(items) {}
 
+     
+
     void draw(SDL_Renderer *rend, int mouse_x=-1000, int mouse_y = -1000){
         if(if_shown){
         for(int i=0; i<things.size(); i++){
@@ -112,8 +278,8 @@ class Menu{
         }
     }
 
-    void add_button(Button b) {
-        things.push_back(b);
+    void add_button(Button&& b) {
+        things.emplace_back(std::move(b));
     }
 
     bool shown(){
