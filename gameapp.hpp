@@ -1099,10 +1099,17 @@ void Screen::update_and_render()
         std::for_each(sprites.begin(), sprites.end(), [this, delta_time](Sprite &sprite)
                  { sprite.update(delta_time); sprite.draw(renderer); });
         }
-        textbox->draw(renderer);
-        interface->draw(renderer, px, py);
+        if (!camera->TEXTBOX_IS_NOT_ZOOMED){
+            textbox->draw(renderer);
+        }
+
         camera->draw(renderer);
         camera->finish_renderer(renderer);
+        if (camera->TEXTBOX_IS_NOT_ZOOMED){
+            textbox->draw(renderer);
+        
+        }
+        interface->draw(renderer, px, py);
         SDL_RenderPresent(renderer);
 }
 

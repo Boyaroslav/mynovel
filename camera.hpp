@@ -64,6 +64,8 @@ class Camera{
     SDL_Texture* cam_tex;
     public:
 
+    bool TEXTBOX_IS_NOT_ZOOMED = 1;
+
     Camera(){
 
     }
