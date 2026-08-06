@@ -155,6 +155,7 @@ SDL_Color to_sdlc(Color x)
     }
 
     std::string hexs = std::string(x.hex);
+    if (hexs[0] == '#') hexs.erase(hexs.begin());
     uint32_t hexValue = 0;
 
     try

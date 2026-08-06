@@ -23,6 +23,9 @@ private:
     SDL_Color color = to_sdlc(DEFAULT_FONT_COLOR);
     SDL_Color border_color = to_sdlc(DEFAULT_FONT_BORDER_COLOR);
 
+    SDL_Color active_color = to_sdlc(ACTIVE_FONT_COLOR);
+    SDL_Color active_border_color = to_sdlc(DEFAULT_ACTIVE_FONT_BORDER_COLOR);
+
 
 public:
     int size = DEFAULT_FONT_SIZE;
@@ -95,13 +98,17 @@ public:
 
  SDL_Texture* renderOutlined(SDL_Renderer* rend,
                             const std::string& text,
-                            Color main, Color outline,
+                            Color main = {}, Color outline = {},
                             int outlineSize = 2) const
 {
     if (!font) return nullptr;
+    SDL_Color mainColor;
+    SDL_Color outlineColor;
+    if (!main.is_set) mainColor = color;
+    else mainColor = to_sdlc(main);
+    if (!outline.is_set) outlineColor = border_color;
+    else outlineColor = to_sdlc(outline);
 
-    SDL_Color mainColor = to_sdlc(main);
-    SDL_Color outlineColor = to_sdlc(outline);
     TTF_SetFontOutline(font, 0);
     SDL_Surface* surfMain = TTF_RenderUTF8_Blended(font, text.c_str(), mainColor);
     SDL_SetSurfaceBlendMode(surfMain, SDL_BLENDMODE_BLEND);
@@ -159,15 +166,27 @@ public:
         border_color = to_sdlc(c);
     }
 
-    SDL_Texture* renderOutlinedUnderlineBold(SDL_Renderer* rend, const std::string& text, Color main, Color outline, int outlineSize = 2)
+    void setActiveColor(Color c){
+        active_color = to_sdlc(c);
+    }
+    void setActiveBorderColor(Color c){
+        active_border_color = to_sdlc(c);
+    }
+    
+
+    SDL_Texture* renderOutlinedUnderlineBold(SDL_Renderer* rend, const std::string& text, Color main = {}, Color outline = {}, int outlineSize = 2)
     {
         if (!font) return nullptr;
 
         // Включаем стиль
         TTF_SetFontStyle(font, TTF_STYLE_UNDERLINE | TTF_STYLE_BOLD);
 
-        SDL_Color mainColor    = to_sdlc(main);
-        SDL_Color outlineColor = to_sdlc(outline);
+        SDL_Color mainColor;
+        SDL_Color outlineColor;
+        if (!main.is_set) mainColor = active_color;
+        else mainColor = to_sdlc(main);
+        if (!outline.is_set) outlineColor = active_border_color;
+        else outlineColor = to_sdlc(outline);
 
         TTF_SetFontOutline(font, 0);
         SDL_Surface* surfMain = TTF_RenderUTF8_Blended(font, text.c_str(), mainColor);

@@ -624,7 +624,7 @@ void Screen::handleEvent(bool isnext_needed)
         case 16: // TBCAP - change footer
         {
             std::string t = get_from_spool(apool[current_event->args_offset].value);
-            textbox->set_footer(t);
+            textbox->set_footer(renderer, t);
         }
         break;
         case 17: // WAIT
@@ -1254,6 +1254,8 @@ void Screen::qload(){
 
 
     textbox->read_yourself(save_file);
+
+    textbox->set_footer(renderer);
 
     audio->read_yourself(save_file);
 

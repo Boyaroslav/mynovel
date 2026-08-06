@@ -25,22 +25,41 @@ struct rgbac {
 
 struct Color {
     char t;
+    bool is_set = 0;
     union {
         rgbac color;
-        char hex[8];
+        char hex[10];
     };
+    Color() : is_set(false), t('r'), color{0,0,0,0} {}
+
     Color(const rgbac& c) : t('r') {
         color = c;
+        is_set = 1;
     }
 
+    Color(Color& c): t(c.t) {
+        if (t == 'r') (color = c.color);
+        else strcpy(hex, c.hex);
+    }
+    Color& operator=(const Color& c) {
+        if (this == &c) return *this;
+        t = c.t;
+        if (t == 'r')
+            color = c.color;
+        else
+            memcpy(hex, c.hex, sizeof(hex));
+        return *this;
+    }
     Color(const char* h) : t('h') {
+        if (strlen(h) <= 0) return;
         if (h) {
-            strncpy(hex, h, 7);
-            hex[7] = '\0';
+            strncpy(hex, h, 9);
+            hex[9] = '\0';
         } else {
-            strcpy(hex, "0000ff");
+            strcpy(hex, "#0000ffff\0");
         }
-        color = rgbac{255,0,0,255};
+        is_set = 1;
+
     }
 
 };

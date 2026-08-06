@@ -22,6 +22,8 @@ Font main_font;
 
 Font text_box_font;
 
+Font text_footer_font;
+
 // TODO - добавить id к сообщениям чтобы lua и тд могли изменять смску по id а не только последнее
 
 
@@ -121,6 +123,10 @@ class TextBox{
         int padding = 20;
         toml::table configuration;
 
+        baked_element baked_footer;
+
+        SDL_Rect footrect;
+
 
         std::vector<MENU_THINGS> interactives;
 
@@ -166,7 +172,7 @@ class TextBox{
         void cl();
         void cllast();
         void draw(SDL_Renderer*);
-        void set_footer(std::string);
+        void set_footer(SDL_Renderer*, std::string);
         void update(float);
         void hide();
         void show();

@@ -178,8 +178,8 @@ void TextBox::draw(SDL_Renderer *rend)
                 const std::string& text = std::get<std::string>(part);
                 if (text.empty()) continue;
 
-                SDL_Texture* tex = text_box_font.renderOutlined(rend, text,
-                    DEFAULT_FONT_COLOR, DEFAULT_FONT_BORDER_COLOR);
+                SDL_Texture* tex = text_box_font.renderOutlined(rend, text
+                    /*DEFAULT_FONT_COLOR, DEFAULT_FONT_BORDER_COLOR*/);
                 if (!tex) continue;
 
                 SDL_Point sz = text_box_font.measure(text);
@@ -195,8 +195,7 @@ void TextBox::draw(SDL_Renderer *rend)
                 const ActiveWord& aw = std::get<ActiveWord>(part);
                 if (aw.text.empty()) continue;
 
-                SDL_Texture* tex = text_box_font.renderOutlinedUnderlineBold(rend, aw.text,
-                    ACTIVE_FONT_COLOR, DEFAULT_ACTIVE_FONT_BORDER_COLOR);
+                SDL_Texture* tex = text_box_font.renderOutlinedUnderlineBold(rend, aw.text);
                 if (!tex) continue;
 
                 SDL_Point sz = text_box_font.measure(aw.text);
@@ -212,6 +211,8 @@ void TextBox::draw(SDL_Renderer *rend)
     }
 
     SDL_RenderSetClipRect(rend, nullptr);
+
+    SDL_RenderCopy(rend, baked_footer.tex, nullptr, &baked_footer.dst);
     if (IS_HOVERED && draw_frame) {
         SDL_SetRenderDrawColor(rend, Outline_color.r, Outline_color.g, Outline_color.b, Outline_color.a);
         SDL_RenderDrawRect(rend, &border);
@@ -222,9 +223,12 @@ void TextBox::draw(SDL_Renderer *rend)
 }
 
 
-void TextBox::set_footer(std::string t)
+void TextBox::set_footer(SDL_Renderer* rend, std::string t="")
 {
-    footer = t;
+    if (t.size()) footer = t;
+    SDL_DestroyTexture(baked_footer.tex);
+    baked_footer.tex = text_footer_font.renderOutlined(rend,
+        footer);
 }
 
 bool TextBox::is_last_completed(){
@@ -378,6 +382,8 @@ void TextBox::move_position(int x_, int y_){
     tb_border.y -= move_y;
     tb_border.x += x_;
     tb_border.y += y_;
+    baked_footer.dst.x -= move_x - x_;
+    baked_footer.dst.y -= move_y - y_;
     tb_sprite.move(x_ - move_x, y_ - move_y);
     move_x = x_;
     move_y = y_;
@@ -463,6 +469,9 @@ void TextBox::hide(){
 void TextBox::write_yourself(FILE* ptr){
     fwrite(&move_x, sizeof(uint32_t), 1, ptr);
     fwrite(&move_y, sizeof(uint32_t), 1, ptr);
+    uint32_t fs = footer.size();
+    fwrite(&fs, sizeof(uint32_t), 1, ptr);
+    fwrite(footer.data(), sizeof(char), fs, ptr);
     uint32_t n = messages.size();
     fwrite(&n, sizeof(uint32_t), 1, ptr);
     for(message& m : messages){
@@ -494,6 +503,8 @@ void TextBox::read_yourself(FILE* ptr){
     messages.clear();
     fread(&move_x, sizeof(uint32_t), 1, ptr);
     fread(&move_y, sizeof(uint32_t), 1, ptr);
+    uint32_t fs; fread(&fs, sizeof(uint32_t), 1, ptr);
+    fread(footer.data(), sizeof(char), fs, ptr);
 
     uint32_t n;
     fread(&n, sizeof(uint32_t), 1, ptr);
@@ -547,8 +558,21 @@ void TextBox::load_toml(SDL_Renderer* rend, std::string t){
 
     std::string f = configuration["textarea"]["font"].value_or<std::string>(""); // если пустой то он сам найдет шрифт в .load
     text_box_font.load(f.c_str());
+    text_box_font.setSize(configuration["textarea"]["font_size"].value_or(DEFAULT_FONT_SIZE));
+
+    f = configuration["footer"]["font"].value_or<std::string>("");
+    text_footer_font.load(f.c_str());
+    text_footer_font.setSize(configuration["footer"]["font_size"].value_or(DEFAULT_FONT_SIZE));
 
     if (configuration.empty()) return;
+
+    text_box_font.setColor(Color{configuration["textarea"]["color"].value_or<std::string>("").c_str()});
+    text_box_font.setBorderColor(Color{configuration["textarea"]["outline_color"].value_or<std::string>("").c_str()});
+    text_box_font.setActiveColor(Color{configuration["textarea"]["active_color"].value_or<std::string>("").c_str()});
+    text_box_font.setActiveBorderColor(Color{configuration["textarea"]["active_outline"].value_or<std::string>("").c_str()});
+    text_footer_font.setColor(Color{configuration["footer"]["color"].value_or<std::string>("").c_str()});
+    text_footer_font.setBorderColor(Color{configuration["footer"]["outline_color"].value_or<std::string>("").c_str()});
+
 
     IS_TOML = 1;
 
@@ -565,6 +589,18 @@ void TextBox::load_toml(SDL_Renderer* rend, std::string t){
         configuration["textbox"]["width"].value_or(0),
         configuration["textbox"]["height"].value_or(0)
     };
+
+    baked_footer.dst = SDL_Rect{
+        configuration["footer"]["x"].value_or(0) + tb_border.x,
+        configuration["footer"]["y"].value_or(0) + tb_border.y,
+        configuration["footer"]["width"].value_or(0),
+        configuration["footer"]["height"].value_or(0)
+    };
+
+    footer = configuration["footer"]["default"].value_or<std::string>("");
+
+    if (footer.size()) set_footer(rend, footer);
+
 
     padding = configuration["textarea"]["padding"].value_or(20);
 
@@ -642,8 +678,8 @@ void TextBox::bake_completed(SDL_Renderer* rend)
                     const std::string& text = std::get<std::string>(part);
                     if (text.empty()) continue;
 
-                    SDL_Texture* part_tex = text_box_font.renderOutlined(rend, text,
-                        DEFAULT_FONT_COLOR, DEFAULT_FONT_BORDER_COLOR);
+                    SDL_Texture* part_tex = text_box_font.renderOutlined(rend, text
+                    /*    DEFAULT_FONT_COLOR, DEFAULT_FONT_BORDER_COLOR*/);
                     if (!part_tex) continue;
 
                     SDL_Point sz = text_box_font.measure(text);
@@ -658,8 +694,8 @@ void TextBox::bake_completed(SDL_Renderer* rend)
                     const ActiveWord& aw = std::get<ActiveWord>(part);
                     if (aw.text.empty()) continue;
 
-                    SDL_Texture* part_tex = text_box_font.renderOutlinedUnderlineBold(rend, aw.text,
-                        ACTIVE_FONT_COLOR, DEFAULT_ACTIVE_FONT_BORDER_COLOR);
+                    SDL_Texture* part_tex = text_box_font.renderOutlinedUnderlineBold(rend, aw.text
+                    /*    ACTIVE_FONT_COLOR, DEFAULT_ACTIVE_FONT_BORDER_COLOR*/);
                     if (!part_tex) continue;
 
                     SDL_Point sz = text_box_font.measure(aw.text);
