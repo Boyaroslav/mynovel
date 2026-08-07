@@ -225,4 +225,15 @@ class Camera{
         set_renderer(rend);
     }
 
+
+    void write_yourself(FILE* save_file){
+
+    }
+
+    void read_yourself(FILE* save_file){
+        
+    }
+
+
+
 };
