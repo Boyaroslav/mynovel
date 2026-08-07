@@ -871,6 +871,15 @@ void Screen::handleEvent(bool isnext_needed)
             sprites[id].show();
         }
         break;
+
+        case 44: // DEL
+        {
+            sprites.erase(sprites.begin() + apool[current_event->args_offset].value);
+        }
+        case 45: // DELSPRITES
+        {
+            sprites.clear();
+        }
         }
 }
 

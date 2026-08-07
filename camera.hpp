@@ -1,6 +1,7 @@
 #include "utils.hpp"
 
 
+
 enum curve_type{
     LINEAR,
     PARABOLIC,
@@ -8,8 +9,8 @@ enum curve_type{
 };
 
 struct camera_operation{
-    int x; int tx;
-    int y; int ty;
+    double x; double tx;
+    double y; double ty;
     double zoom; double target_zoom;
     double angle; double target_angle;
 
@@ -23,6 +24,12 @@ struct camera_operation{
 
 double co_time(camera_operation& co){
     return co.elapsed / co.duration;
+}
+
+float ease_in_out(float t) {
+    if (t < 0.0f) t = 0.0f;
+    if (t > 1.0f) t = 1.0f;
+    return t * t * t * (t * (t * 6.0f - 15.0f) + 10.0f); // 6t^5 - 15t^4 + 10t^3
 }
 
 
@@ -44,14 +51,14 @@ float linear(float t, float start, float end, bool inverted=0){
 
 class Camera{
     private:
-    int bx=0, by=0;
+    double bx=0, by=0;
 
     int w, h;
     int moved_x=0, moved_y=0;
     float zoom=1.0;
 
-    int center_x;
-    int center_y;
+    double center_x;
+    double center_y;
     
     float angle = 0;
 
@@ -67,6 +74,10 @@ class Camera{
     bool TEXTBOX_IS_NOT_ZOOMED = 1;
 
     Camera(){
+
+        camera_x = 0;
+        camera_y = 0;
+        camera_zoom = 1.0;
 
     }
 
@@ -92,6 +103,10 @@ class Camera{
     }
 
     void camera_reset(){
+
+        camera_x = 0;
+        camera_y = 0;
+        camera_zoom = 1.0;
         cops.clear();
         center_x=w/2;
         center_y=h/2;
@@ -164,10 +179,10 @@ class Camera{
                 break;
                 case PARABOLIC:
                 {
-                    center_x = parabollic(t, co.x, co.tx, 0);
-                    center_y = parabollic(t, co.y, co.ty, 0);
-                    angle = parabollic(t, co.angle, co.target_angle, 0);
-                    zoom = parabollic(t, co.zoom, co.target_zoom, 0);
+                    center_x = linear(ease_in_out(t), co.x, co.tx, 0);
+                    center_y = linear(ease_in_out(t), co.y, co.ty, 0);
+                    angle = linear(ease_in_out(t), co.angle, co.target_angle, 0);
+                    zoom = linear(ease_in_out(t), co.zoom, co.target_zoom, 0);
                 }
                 break;
         }
@@ -189,27 +204,24 @@ class Camera{
 
     void draw(SDL_Renderer* rend){
         finish_renderer(rend);
-        bx = center_x - ((int)((double)w / zoom)/2); by = center_y - ((int)((double)h / zoom)/2);
-        int bw = (int)((double)w / zoom), bh = (int)((double)h / zoom);
+        double bw = (double)w / zoom;
+        double bh = (double)h / zoom;
 
-        if (bx < 0) bx =0;
+        bx = center_x - bw / 2.0;
+        by = center_y - bh / 2.0;
+
+        if (bx < 0) bx = 0;
         if (by < 0) by = 0;
         if (bx + bw > w) bx = w - bw;
         if (by + bh > h) by = h - bh;
 
+        camera_x = bx;
+        camera_y = by;
+        camera_zoom = zoom;
 
-        SDL_Rect source{
-            bx, by,
-            bw, bh
-        };
+        SDL_Rect target{0, 0, real_width, real_height};
+        SDL_RenderCopy(rend, cam_tex, nullptr, &target);
 
-
-        SDL_Rect target{
-            0, 0, real_width, real_height
-        };
-
-
-        SDL_RenderCopy(rend, cam_tex, &source, &target);
         set_renderer(rend);
     }
 

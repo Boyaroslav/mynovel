@@ -34,7 +34,7 @@ class Sprite {
 private:
     std::vector<sprite_texture> textures;
     std::vector<uint32_t> texture_hashes;
-    SDL_Rect rect = {0,0,0,0};
+    SDL_FRect rect = {0,0,0,0};
     double x = 0.0, y=0.0;
     int texture_size_w, texture_size_h;
     float angle = 0;
@@ -59,6 +59,7 @@ private:
     bool in_fade = true; // есть ли исчезающий спрайт при смене главного спрайта
 
 public:
+    bool IGNORE_CAMERA = false;
     ~Sprite() {
         texture_hashes.clear();
         for (auto t : textures) SDL_DestroyTexture(t.texture);
@@ -236,32 +237,32 @@ public:
             return;
         }
         SDL_SetRenderDrawBlendMode(rend, SDL_BLENDMODE_BLEND);
-        SDL_Rect r_ = placed_rect(rect);
+        SDL_FRect r_ = placed_rect(rect);
         if((future_index == -1) && hide_transition >= 0.0f){
             SDL_SetTextureAlphaMod(textures[current_index].texture, Uint8(hide_transition * 255));
-            SDL_RenderCopyEx(rend, textures[current_index].texture, nullptr, &r_, angle, nullptr, SDL_FLIP_NONE);     
+            SDL_RenderCopyExF(rend, textures[current_index].texture, nullptr, &r_, angle, nullptr, SDL_FLIP_NONE);     
         }
         else if ((future_index == -1) && in_fade) {
             SDL_SetTextureAlphaMod(textures[current_index].texture, 255);
-            SDL_RenderCopyEx(rend, textures[current_index].texture, nullptr, &r_, angle, nullptr, SDL_FLIP_NONE);
+            SDL_RenderCopyExF(rend, textures[current_index].texture, nullptr, &r_, angle, nullptr, SDL_FLIP_NONE);
         }
         else {
             if(in_fade){SDL_SetTextureAlphaMod(textures[current_index].texture, 255);
-                SDL_RenderCopyEx(rend, textures[current_index].texture, nullptr, &r_, angle, nullptr, SDL_FLIP_NONE);
+                SDL_RenderCopyExF(rend, textures[current_index].texture, nullptr, &r_, angle, nullptr, SDL_FLIP_NONE);
             }
             SDL_SetTextureAlphaMod(textures[future_index].texture, Uint8(transition_alpha * 255));
             //set_rect(textures[current_index].rect);
 
         
             //set_rect(textures[future_index].rect);
-            SDL_RenderCopyEx(rend, textures[future_index].texture, nullptr, &r_, angle, nullptr, SDL_FLIP_NONE);
+            SDL_RenderCopyExF(rend, textures[future_index].texture, nullptr, &r_, angle, nullptr, SDL_FLIP_NONE);
 
             SDL_SetTextureAlphaMod(textures[future_index].texture, 255);
         }
         if(in_fade)SDL_SetTextureAlphaMod(textures[current_index].texture, 255);
     }
 
-    void set_rect(int x_, int y_, int w=-1, int h=-1) {
+    void set_rect(float x_, float y_, float w=-1, float h=-1) {
         x = x_;
         y = y_;
         rect.x = x_;
@@ -282,8 +283,15 @@ public:
 
     }
 
-    void set_rect(SDL_Rect r){
+    void set_rect(SDL_FRect r){
         rect = r;
+    }
+
+    void set_rect(SDL_Rect r){
+        rect.x = r.x;
+        rect.y = r.y;
+        rect.w = r.w;
+        rect.h = r.h;
     }
 
     void set_angle(float a) {
@@ -292,7 +300,7 @@ public:
     int get_last() {
         return textures.size()-1;
     }
-    SDL_Rect get_rect(){
+    SDL_FRect get_rect(){
         return rect;
     }
     void move(int x_, int y_=0, int t_=0){
@@ -311,10 +319,25 @@ public:
         
     }
 
-    SDL_Rect placed_rect(SDL_Rect r) const{
-        r.x += std::round(x);
-        r.y += std::round(y);
-        return r; 
+    SDL_FRect placed_rect(SDL_FRect r) const {
+        double world_x = r.x + x;
+        double world_y = r.y + y;
+
+        if (IGNORE_CAMERA) {
+            r.x = world_x;
+            r.y = world_y;
+            return r;
+        }
+
+        double screen_x = (world_x - camera_x) * camera_zoom;
+        double screen_y = (world_y - camera_y) * camera_zoom;
+
+        r.x = screen_x;
+        r.y = screen_y;
+        r.w = r.w * camera_zoom;
+        r.h = r.h * camera_zoom;
+
+        return r;
     }
     Sprite(const Sprite&) = delete;
 Sprite& operator=(const Sprite&) = delete;

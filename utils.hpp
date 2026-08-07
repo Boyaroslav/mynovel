@@ -113,6 +113,13 @@ void log(SDL_Rect msg)
     return;
 }
 
+
+void log(SDL_FRect msg)
+{
+    std::cout << "SDL_FRect: " << msg.x << ' ' << msg.y << ' ' << msg.w << ' ' << msg.h << "\n";
+    return;
+}
+
 uint64_t fnv1a(const std::string &s)
 {
     uint64_t hash = 1469598103934665603ULL;
@@ -426,3 +433,8 @@ bool if_pixel(SDL_Surface* surf, int x, int y, int nw, int nh){ // провер�
     SDL_GetRGBA(puxel, surf->format, &r, &g, &b, &a);
     return !(a == 0) || !(r + g + b == 0);
 }
+
+
+double camera_x;
+double camera_y;
+double camera_zoom;

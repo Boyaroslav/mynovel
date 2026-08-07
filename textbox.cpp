@@ -556,6 +556,8 @@ void TextBox::load_toml(SDL_Renderer* rend, std::string t){
     configuration = read_toml("textbox.toml");
     log("reading toml...");
 
+    tb_sprite.IGNORE_CAMERA = 1;
+
     std::string f = configuration["textarea"]["font"].value_or<std::string>(""); // если пустой то он сам найдет шрифт в .load
     text_box_font.load(f.c_str());
     text_box_font.setSize(configuration["textarea"]["font_size"].value_or(DEFAULT_FONT_SIZE));
