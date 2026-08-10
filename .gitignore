@@ -48,6 +48,8 @@ android/.gradle/
 android/build/
 android/.cxx
 
+android/app/src/main/assets/*
+android/app/src/main/jniLibs/*
 android/app/build/
 *.apk
 *.ap_

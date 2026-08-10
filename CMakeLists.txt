@@ -5,9 +5,10 @@ set(CMAKE_CXX_STANDARD 20)
 option(SYSTEM_SDL "Use system-installed SDL2 instead of building from source" OFF)
 
 file(GLOB SRC
-    main.cpp
-    *.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/main.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/*.cpp
 )
+
 
 
 if(SYSTEM_SDL)
@@ -19,8 +20,9 @@ if(SYSTEM_SDL)
     set(SDL_LIBS SDL2::SDL2 SDL2_image::SDL2_image SDL2_ttf::SDL2_ttf SDL2_mixer::SDL2_mixer)
 else()
     include(FetchContent)
-    FetchContent_Declare(freetype
-    URL https://download.savannah.gnu.org/releases/freetype/freetype-2.13.2.tar.gz
+    FetchContent_Declare(
+        freetype
+        URL "https://sourceforge.net/projects/freetype/files/freetype2/2.14.3/freetype-2.14.3.tar.gz/download"
     )
     FetchContent_Declare(SDL2
         URL https://github.com/libsdl-org/SDL/releases/download/release-2.32.4/SDL2-2.32.4.tar.gz
@@ -83,9 +85,14 @@ else()
     set(SDL_LIBS SDL2::SDL2-static SDL2::image SDL2::ttf SDL2::mixer)
 endif()
 
-add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/tomlplusplus)
 
-file(GLOB LUA_SOURCES lua/*.c)
+
+add_subdirectory(
+    ${CMAKE_CURRENT_LIST_DIR}/tomlplusplus
+    ${CMAKE_BINARY_DIR}/tomlplusplus
+)
+
+file(GLOB LUA_SOURCES ${CMAKE_CURRENT_LIST_DIR}/lua/*.c)
 
 list(REMOVE_ITEM LUA_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/lua/lua.c)
 list(REMOVE_ITEM LUA_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/lua/luac.c)
@@ -94,19 +101,29 @@ add_library(lua_lib STATIC ${LUA_SOURCES})
 
 target_include_directories(lua_lib PUBLIC lua/)
 if(ANDROID)
-    add_library(main SHARED ${SRC})
+    add_library(lcnovel SHARED ${SRC})
 
-    target_link_libraries(main
+    target_include_directories(lcnovel PRIVATE
+        ${sdl2_SOURCE_DIR}/include
+        ${SDL2_image_SOURCE_DIR}/include
+        ${SDL2_ttf_SOURCE_DIR}
+        ${SDL2_mixer_SOURCE_DIR}/include
+        ${CMAKE_CURRENT_LIST_DIR}/lua
+    )
+
+    target_link_libraries(lcnovel
         SDL2::SDL2main
         SDL2::image
         SDL2::ttf
         SDL2::mixer
         lua_lib
         tomlplusplus::tomlplusplus
+    
+
     )
 else()
-    add_executable(lcnovel main.cpp)
-    add_executable(dumper novel_dumper.cpp)
+    add_executable(lcnovel ${CMAKE_CURRENT_LIST_DIR}/main.cpp)
+    add_executable(dumper ${CMAKE_CURRENT_LIST_DIR}/novel_dumper.cpp)
     target_link_libraries(lcnovel ${SDL_LIBS} lua_lib tomlplusplus::tomlplusplus)
     target_link_libraries(dumper ${SDL_LIBS})
     if(WIN32)

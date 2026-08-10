@@ -6,19 +6,15 @@ def buildWithCMake = project.hasProperty('BUILD_WITH_CMAKE');
 
 android {
     namespace = "org.libsdl.app"
-    compileSdkVersion 34
+    compileSdkVersion 35
     ndkVersion = "28.2.13676358"
     defaultConfig {
-        minSdkVersion 24
-        targetSdkVersion 34
+        minSdkVersion 21
+        targetSdkVersion 35
         versionCode 1
         versionName "1.0"
         externalNativeBuild {
-            ndkBuild {
-                arguments "APP_PLATFORM=android-21"
-                // abiFilters 'armeabi-v7a', 'arm64-v8a', 'x86', 'x86_64'
-                abiFilters 'arm64-v8a'
-            }
+
             cmake {
                 arguments "-DANDROID_PLATFORM=android-21", "-DANDROID_STL=c++_static"
                 // abiFilters 'armeabi-v7a', 'arm64-v8a', 'x86', 'x86_64'
@@ -43,8 +39,8 @@ android {
         externalNativeBuild {
 
             cmake {
-                path 'jni/CMakeLists.txt'
-            }
+                    path 'jni/CMakeLists.txt'
+                }
 
         }
 

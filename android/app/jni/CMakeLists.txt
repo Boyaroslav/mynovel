@@ -1,92 +1,59 @@
-cmake_minimum_required(VERSION 3.5)
-
+cmake_minimum_required(VERSION 3.10)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 project("lcnovel")
 
 set(PROJECT_ROOT ${CMAKE_SOURCE_DIR}/../../..)
-
-set(JNI_LIBS_DIR ${CMAKE_SOURCE_DIR}/../src/main/jniLibs/${ANDROID_ABI})
-set(SDL2_INCLUDE_DIR ${PROJECT_ROOT}/build/_deps/sdl2-src/include)
-set(SDL2_IMAGE_INCLUDE_DIR ${PROJECT_ROOT}/build/_deps/sdl2_image-src/include)
-set(SDL2_TTF_INCLUDE_DIR ${PROJECT_ROOT}/build/_deps/sdl2_ttf-src/)
-set(SDL2_MIXER_INCLUDE_DIR ${PROJECT_ROOT}/build/_deps/sdl2_mixer-src/include)
 set(LUA_ROOT ${CMAKE_SOURCE_DIR}/../../../lua)
+set(JNI_LIBS_OUT_DIR ${CMAKE_SOURCE_DIR}/../src/main/jniLibs/${ANDROID_ABI})
+file(MAKE_DIRECTORY ${JNI_LIBS_OUT_DIR})
 
-if(EXISTS ${LUA_ROOT}/lapi.c)
-    add_library(lua STATIC
-        ${LUA_ROOT}/lapi.c
-        ${LUA_ROOT}/lauxlib.c
-        ${LUA_ROOT}/lbaselib.c
-        ${LUA_ROOT}/lcode.c
-        ${LUA_ROOT}/ldebug.c
-        ${LUA_ROOT}/ldo.c
-        ${LUA_ROOT}/ldump.c
-        ${LUA_ROOT}/lfunc.c
-        ${LUA_ROOT}/lgc.c
-        ${LUA_ROOT}/linit.c
-        ${LUA_ROOT}/liolib.c
-        ${LUA_ROOT}/llex.c
-        ${LUA_ROOT}/lmathlib.c
-        ${LUA_ROOT}/lmem.c
-        ${LUA_ROOT}/lcorolib.c
-        ${LUA_ROOT}/lctype.c
-        ${LUA_ROOT}/ldblib.c  
-        ${LUA_ROOT}/loadlib.c
-        ${LUA_ROOT}/lobject.c
-        ${LUA_ROOT}/lopcodes.c
-        ${LUA_ROOT}/loslib.c
-        ${LUA_ROOT}/lparser.c
-        ${LUA_ROOT}/lstate.c
-        ${LUA_ROOT}/lstring.c
-        ${LUA_ROOT}/lstrlib.c
-        ${LUA_ROOT}/ltable.c
-        ${LUA_ROOT}/ltablib.c
-        ${LUA_ROOT}/ltm.c
-        ${LUA_ROOT}/lundump.c
-        ${LUA_ROOT}/lutf8lib.c
-        ${LUA_ROOT}/lvm.c
-        ${LUA_ROOT}/lzio.c
-    )
-    
-    target_include_directories(lua PUBLIC ${LUA_ROOT})
-    target_compile_definitions(lua PRIVATE
-        LUA_USE_LINUX
-        LUA_COMPAT_5_2
-        LUA_COMPAT_5_3
-        LUA_USE_DLOPEN=0
-    )
-    target_compile_options(lua PRIVATE 
-        -w
-        -fno-stack-protector
-    )
-    set(LUA_LIBRARY lua)
-else()
-    find_library(LUA_LIBRARY
-        NAMES lua lua54 lua53
-        PATHS ${JNI_LIBS_DIR}
-        NO_DEFAULT_PATH
-    )
-    
-    if(NOT LUA_LIBRARY)
-    endif()
-endif()
+include(FetchContent)
 
-set(SDL2_LIBRARY ${JNI_LIBS_DIR}/libSDL2.so)
-set(SDL2_TTF_LIBRARY ${JNI_LIBS_DIR}/libSDL2_ttf.so)
-set(SDL2_MIXER_LIBRARY ${JNI_LIBS_DIR}/libSDL2_mixer.so)
-set(SDL2_IMAGE_LIBRARY ${JNI_LIBS_DIR}/libSDL2_image.so)
+set(SDL_STATIC OFF CACHE BOOL "" FORCE)
+set(SDL_SHARED ON CACHE BOOL "" FORCE)
+set(SDL2IMAGE_STATIC OFF CACHE BOOL "" FORCE)
+set(SDL2IMAGE_SHARED ON CACHE BOOL "" FORCE)
+set(SDL2TTF_STATIC OFF CACHE BOOL "" FORCE)
+set(SDL2TTF_SHARED ON CACHE BOOL "" FORCE)
+set(SDL2MIXER_STATIC OFF CACHE BOOL "" FORCE)
+set(SDL2MIXER_SHARED ON CACHE BOOL "" FORCE)
+set(BUILD_SHARED_LIBS ON CACHE BOOL "" FORCE)
+set(SDL2TTF_FREETYPE ON CACHE BOOL "" FORCE)
+
+set(SDL2MIXER_STATIC OFF CACHE BOOL "" FORCE)
+set(SDL2MIXER_SHARED ON CACHE BOOL "" FORCE)
+set(SDL2MIXER_MP3 ON CACHE BOOL "" FORCE)
+set(SDL2MIXER_OGG ON CACHE BOOL "" FORCE)
+set(SDL2MIXER_OPUS OFF CACHE BOOL "" FORCE)
+set(SDL2MIXER_MOD OFF CACHE BOOL "" FORCE)
+set(SDL2MIXER_MOD_XMP OFF CACHE BOOL "" FORCE)
+set(SDL2MIXER_FLAC OFF CACHE BOOL "" FORCE)
+set(SDL2MIXER_WAVPACK OFF CACHE BOOL "" FORCE)
+
+FetchContent_Declare(SDL2       URL https://github.com/libsdl-org/SDL/releases/download/release-2.32.4/SDL2-2.32.4.tar.gz)
+FetchContent_Declare(SDL2_image URL https://github.com/libsdl-org/SDL_image/releases/download/release-2.8.2/SDL2_image-2.8.2.tar.gz)
+FetchContent_Declare(SDL2_ttf   URL https://github.com/libsdl-org/SDL_ttf/releases/download/release-2.22.0/SDL2_ttf-2.22.0.tar.gz)
+FetchContent_Declare(SDL2_mixer URL https://github.com/libsdl-org/SDL_mixer/releases/download/release-2.8.0/SDL2_mixer-2.8.0.tar.gz)
+FetchContent_MakeAvailable(SDL2 SDL2_image SDL2_ttf SDL2_mixer)
+
+file(GLOB LUA_SOURCES ${LUA_ROOT}/*.c)
+list(REMOVE_ITEM LUA_SOURCES ${LUA_ROOT}/lua.c ${LUA_ROOT}/luac.c ${LUA_ROOT}/onelua.c)
+add_library(lua SHARED ${LUA_SOURCES})
+target_include_directories(lua PUBLIC ${LUA_ROOT})
+target_compile_definitions(lua PRIVATE LUA_USE_LINUX LUA_COMPAT_5_2 LUA_COMPAT_5_3 LUA_USE_DLOPEN=0)
+target_compile_options(lua PRIVATE -w -fno-stack-protector)
 
 add_library(lcnovel SHARED
-    ${CMAKE_SOURCE_DIR}../../../../main.cpp
+    ${CMAKE_SOURCE_DIR}/../../../main.cpp
 )
 
 target_link_libraries(lcnovel
-    ${SDL2_LIBRARY}
-    ${SDL2_TTF_LIBRARY}
-    ${SDL2_MIXER_LIBRARY}
-    ${SDL2_IMAGE_LIBRARY}
-    ${LUA_LIBRARY}
+    SDL2
+    SDL2_image
+    SDL2_ttf
+    SDL2_mixer
+    lua
     android
     OpenSLES
     log
@@ -95,18 +62,26 @@ target_link_libraries(lcnovel
 )
 
 target_include_directories(lcnovel PRIVATE
-    ${SDL2_INCLUDE_DIR}
-    ${SDL2_IMAGE_INCLUDE_DIR} 
-    ${SDL2_TTF_INCLUDE_DIR}
-    ${SDL2_MIXER_INCLUDE_DIR}
-    ${LUA_ROOT}
+    ${sdl2_SOURCE_DIR}/include
+    ${sdl2_image_SOURCE_DIR}/include
+    ${sdl2_ttf_SOURCE_DIR}
+    ${sdl2_mixer_SOURCE_DIR}/include
     ${LUA_ROOT}
     src/main/cpp
     ${PROJECT_ROOT}
 )
 
-target_compile_options(lcnovel PRIVATE
-    -Wall
-    -Wextra
-    -fPIC
+target_compile_options(lcnovel PRIVATE -Wall -Wextra -fPIC)
+
+add_custom_command(TARGET lcnovel POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E make_directory ${JNI_LIBS_OUT_DIR}
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+        $<TARGET_FILE:lcnovel>
+        $<TARGET_FILE:SDL2>
+        $<TARGET_FILE:SDL2_image>
+        $<TARGET_FILE:SDL2_ttf>
+        $<TARGET_FILE:SDL2_mixer>
+        $<TARGET_FILE:lua>
+        ${JNI_LIBS_OUT_DIR}
+    COMMENT "Copying built shared libraries to jniLibs/${ANDROID_ABI}"
 )
