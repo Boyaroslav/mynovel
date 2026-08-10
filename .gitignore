@@ -7,6 +7,7 @@ tr.txt
 project1
 *.zip
 *.json
+*.so
 *.ccnvl
 _deps
 _deps/*
@@ -48,8 +49,7 @@ android/.gradle/
 android/build/
 android/.cxx
 
-android/app/src/main/assets/*
-android/app/src/main/jniLibs/*
+
 android/app/build/
 *.apk
 *.ap_
