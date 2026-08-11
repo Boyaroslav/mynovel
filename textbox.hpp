@@ -158,6 +158,7 @@ class TextBox{
 
         std::vector<baked_element> baked_lines;
     public:
+        SDL_RendererInfo info;
         std::function<void(std::string&)> run_lua_func;
         bool hidden = false;
         TextBox(){

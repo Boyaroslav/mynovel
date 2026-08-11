@@ -87,7 +87,7 @@ bool Screen::init_()
         renderer = SDL_CreateRenderer(
             window,
             -1,
-            SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
+            SDL_RENDERER_ACCELERATED | /*SDL_RENDERER_PRESENTVSYNC |*/ SDL_RENDERER_TARGETTEXTURE);
 
         if (!renderer)
         {
@@ -113,6 +113,8 @@ bool Screen::init_()
         camera = std::make_unique<Camera>();
         audio = std::make_unique<Audio>();
         camera->init(renderer, width, height);
+
+        SDL_GetRendererInfo(renderer, &textbox->info);
 
         textbox->run_lua_func = [&](std::string s){ lua_runtime.run_string(s);};
         if (if_its_game == 0){

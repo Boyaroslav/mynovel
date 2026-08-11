@@ -67,6 +67,7 @@ class Camera{
     float move_speed = 1.0;
 
     std::vector<camera_operation> cops;
+    SDL_RendererInfo info;
 
     SDL_Texture* cam_tex;
     public:
@@ -87,9 +88,11 @@ class Camera{
     }
 
     void init(SDL_Renderer* rend, int w_, int h_){
+        SDL_GetRendererInfo(rend, &info);
+
         cam_tex = SDL_CreateTexture(
             rend,
-            SDL_PIXELFORMAT_RGBA8888,
+            info.num_texture_formats > 0? info.texture_formats[0] :  SDL_PIXELFORMAT_RGBA8888,
             SDL_TEXTUREACCESS_TARGET,
             w_, h_
         );

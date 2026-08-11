@@ -658,9 +658,15 @@ void TextBox::bake_completed(SDL_Renderer* rend)
         int tex_h = (int)msg_lines.size() * line_height;
         if (tex_w <= 0 || tex_h <= 0) continue;
 
-        SDL_Texture* target = SDL_CreateTexture(rend, SDL_PIXELFORMAT_RGBA8888,
+        SDL_Texture* target = SDL_CreateTexture(rend, info.num_texture_formats > 0? info.texture_formats[0] :  SDL_PIXELFORMAT_RGBA8888,
             SDL_TEXTUREACCESS_TARGET, tex_w, tex_h);
-        if (!target) continue;
+
+        if (!target){
+                log(std::string("LCNOVEL tex fail: ") + SDL_GetError()
+        + " w=" + std::to_string(tex_w) + " h=" + std::to_string(tex_h));
+
+            continue;}
+        
 
         SDL_SetTextureBlendMode(target, SDL_BLENDMODE_BLEND);
 

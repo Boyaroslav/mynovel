@@ -13,7 +13,7 @@ _deps
 _deps/*
 include/*
 .DS_Store
-main
+
 build/
 build_windows/
 build_macos/
@@ -37,7 +37,6 @@ cmake_install.cmake
 *.a
 *.o
 *.d
-main
 
 scene.bin
 .vscode/
