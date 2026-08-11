@@ -504,6 +504,7 @@ void TextBox::read_yourself(FILE* ptr){
     fread(&move_x, sizeof(uint32_t), 1, ptr);
     fread(&move_y, sizeof(uint32_t), 1, ptr);
     uint32_t fs; fread(&fs, sizeof(uint32_t), 1, ptr);
+    footer.resize(fs);
     fread(footer.data(), sizeof(char), fs, ptr);
 
     uint32_t n;
